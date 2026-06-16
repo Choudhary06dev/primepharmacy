@@ -1,13 +1,61 @@
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { getDashboardStats } from '../../services/salesService';
 
 const Dashboard = () => {
   const { user, pharmacy } = useAuth();
+  const [statsData, setStatsData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    const fetchStats = async () => {
+      try {
+        const data = await getDashboardStats();
+        if (active) {
+          setStatsData(data);
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('Failed to load dashboard statistics:', err);
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+    fetchStats();
+    return () => { active = false; };
+  }, []);
 
   const stats = [
-    { title: 'Today\'s Sales', value: 'PKR 0.00', change: '0% from yesterday', icon: '📈', color: 'border-emerald-500/25 text-emerald-600 dark:text-emerald-400' },
-    { title: 'Purchase Orders', value: '0 Orders', change: '0 this month', icon: '📝', color: 'border-purple-500/25 text-purple-600 dark:text-purple-400' },
-    { title: 'Active Batches', value: '0 Batches', change: 'FEFO Tracking active', icon: '📦', color: 'border-blue-500/25 text-blue-600 dark:text-blue-400' },
-    { title: 'Low Stock Alerts', value: '0 Items', change: '0 critical warnings', icon: '⚠️', color: 'border-amber-500/25 text-amber-600 dark:text-amber-400' },
+    { 
+      title: 'Today\'s Sales', 
+      value: loading ? '...' : `PKR ${Number(statsData?.today_sales ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 
+      change: statsData?.today_sales_change || '0% from yesterday', 
+      icon: '📈', 
+      color: 'border-emerald-500/25 text-emerald-600 dark:text-emerald-400' 
+    },
+    { 
+      title: 'Purchase Orders', 
+      value: loading ? '...' : `${statsData?.purchase_orders ?? 0} Orders`, 
+      change: `${statsData?.purchase_orders_this_month ?? 0} this month`, 
+      icon: '📝', 
+      color: 'border-purple-500/25 text-purple-600 dark:text-purple-400' 
+    },
+    { 
+      title: 'Active Batches', 
+      value: loading ? '...' : `${statsData?.active_batches ?? 0} Batches`, 
+      change: 'FEFO Tracking active', 
+      icon: '📦', 
+      color: 'border-blue-500/25 text-blue-600 dark:text-blue-400' 
+    },
+    { 
+      title: 'Low Stock Alerts', 
+      value: loading ? '...' : `${statsData?.low_stock_alerts ?? 0} Items`, 
+      change: `${statsData?.critical_warnings ?? 0} critical warnings`, 
+      icon: '⚠️', 
+      color: 'border-amber-500/25 text-amber-600 dark:text-amber-400' 
+    },
   ];
 
   return (

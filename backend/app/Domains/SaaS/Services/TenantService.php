@@ -37,6 +37,8 @@ class TenantService
                 'pharmacy_id' => $pharmacy->id,
                 'name' => 'Main Branch',
                 'is_main' => true,
+                'address' => $data['pharmacy_address'] ?? null,
+                'phone' => $data['pharmacy_phone'] ?? null,
             ]);
 
             // 3. Create Default Tenant Roles in Spatie Permissions

@@ -15,6 +15,12 @@ import Medicines from './features/inventory/pages/Medicines';
 import Batches from './features/inventory/pages/Batches';
 import Pos from './features/sales/pages/Pos';
 import Sales from './features/sales/pages/Sales';
+import Suppliers from './features/inventory/pages/Suppliers';
+import Purchases from './features/inventory/pages/Purchases';
+import Expenses from './features/financials/pages/Expenses';
+import Ledgers from './features/financials/pages/Ledgers';
+import Returns from './features/returns/pages/Returns';
+import Reports from './features/financials/pages/Reports';
 
 function App() {
   return (
@@ -44,9 +50,14 @@ function App() {
                     <Route path="/inventory/batches" element={<Batches />} />
                     <Route path="/sales/pos" element={<Pos />} />
                     <Route path="/sales" element={<Sales />} />
-                    <Route path="/purchases" element={<div className="rounded-2xl border border-slate-900 bg-slate-990/40 p-6 backdrop-blur-md text-slate-300">Purchase Orders Module</div>} />
-                    <Route path="/partners" element={<div className="rounded-2xl border border-slate-900 bg-slate-990/40 p-6 backdrop-blur-md text-slate-300">Suppliers & Customers Ledgers Module</div>} />
-                    <Route path="/financials" element={<div className="rounded-2xl border border-slate-900 bg-slate-990/40 p-6 backdrop-blur-md text-slate-300">Financial Ledger & Expenses</div>} />
+                    <Route path="/purchases" element={<Purchases />} />
+                    <Route path="/partners/suppliers" element={<Suppliers />} />
+                    <Route path="/financials/expenses" element={<Expenses />} />
+                    <Route path="/financials/supplier-ledger" element={<Ledgers />} />
+                    <Route path="/financials/customer-ledger" element={<Ledgers />} />
+                    <Route path="/financials/reports" element={<Reports />} />
+                    <Route path="/returns/customer" element={<Returns />} />
+                    <Route path="/returns/supplier" element={<Returns />} />
                   </Routes>
                 </DashboardLayout>
               </ProtectedRoute>

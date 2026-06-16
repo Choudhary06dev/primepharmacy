@@ -23,7 +23,7 @@ const getInitialRoles = () => {
     try {
       const parsed = JSON.parse(stored);
       if (parsed.length > 0) {
-        // Upgrade check: Ensure Admin role has branch and user management permissions
+        // Upgrade check: Ensure Admin and Manager roles have required permissions
         let updated = false;
         const adminRole = parsed.find((r) => r.name === 'Admin');
         if (adminRole) {
@@ -33,6 +33,17 @@ const getInitialRoles = () => {
           }
           if (!adminRole.permissions.includes('module_branches')) {
             adminRole.permissions.push('module_branches');
+            updated = true;
+          }
+          if (!adminRole.permissions.includes('module_financial_reports')) {
+            adminRole.permissions.push('module_financial_reports');
+            updated = true;
+          }
+        }
+        const managerRole = parsed.find((r) => r.name === 'Manager');
+        if (managerRole) {
+          if (!managerRole.permissions.includes('module_financial_reports')) {
+            managerRole.permissions.push('module_financial_reports');
             updated = true;
           }
         }
@@ -67,6 +78,7 @@ const getInitialRoles = () => {
         'module_expenses',
         'module_supplier_ledger',
         'module_customer_ledger',
+        'module_financial_reports',
         'module_customer_returns',
         'module_supplier_returns',
         'module_branches',
@@ -93,6 +105,7 @@ const getInitialRoles = () => {
         'module_expenses',
         'module_supplier_ledger',
         'module_customer_ledger',
+        'module_financial_reports',
         'module_customer_returns',
         'module_supplier_returns',
         'module_branches',
@@ -119,6 +132,7 @@ const getInitialRoles = () => {
         'module_expenses',
         'module_supplier_ledger',
         'module_customer_ledger',
+        'module_financial_reports',
         'module_customer_returns',
         'module_supplier_returns',
       ],
@@ -306,6 +320,7 @@ let systemPermissions = [
   { id: 'module_expenses', label: 'Expenses', category: 'Financials', sidebarPath: '/financials/expenses' },
   { id: 'module_supplier_ledger', label: 'Supplier Ledger', category: 'Financials', sidebarPath: '/financials/supplier-ledger' },
   { id: 'module_customer_ledger', label: 'Customer Ledger', category: 'Financials', sidebarPath: '/financials/customer-ledger' },
+  { id: 'module_financial_reports', label: 'Analytics & Reports', category: 'Financials', sidebarPath: '/financials/reports' },
   { id: 'module_customer_returns', label: 'Customer Returns', category: 'Returns', sidebarPath: '/returns/customer' },
   { id: 'module_supplier_returns', label: 'Supplier Returns', category: 'Returns', sidebarPath: '/returns/supplier' },
   { id: 'module_branches', label: 'Branches Settings', category: 'Administration', sidebarPath: '/settings/branches' },

@@ -601,83 +601,76 @@ const Pos = () => {
         >
           <div 
             ref={receiptRef}
-            className="border-2 border-dashed border-slate-350 dark:border-zinc-800 p-6 rounded-xl bg-white text-black space-y-4 shadow-inner max-w-sm mx-auto"
+            className="border-2 border-dashed border-slate-350 dark:border-zinc-800 p-4 rounded-xl bg-white text-black space-y-3 shadow-inner max-w-sm mx-auto"
             style={{ color: '#000000', backgroundColor: '#ffffff', fontFamily: 'monospace' }}
           >
+            {/* Header */}
             <div className="text-center">
-              <h2 className="text-xl font-bold font-display leading-tight">{pharmacy?.name || 'PrimePharm ERP'}</h2>
-              <p className="text-[10px] text-slate-500">Multan Road, Lahore, Pakistan</p>
+              <h2 className="text-lg font-bold font-display leading-tight">{checkoutResult.branch?.name || pharmacy?.name || 'PrimePharm ERP'}</h2>
+              <p className="text-[10px] text-slate-500 leading-tight">{checkoutResult.branch?.address || 'Multan Road, Lahore, Pakistan'}</p>
+              {checkoutResult.branch?.phone && (
+                <p className="text-[10px] text-slate-400 font-mono leading-none">Phone: {checkoutResult.branch.phone}</p>
+              )}
               <p className="text-xs font-semibold mt-1">INVOICE RECEIPT</p>
             </div>
 
-            <div className="border-t border-b border-dashed border-slate-300 py-2 text-xs space-y-1">
+            {/* Invoice Metadata in Side-by-Side rows */}
+            <div className="border-t border-b border-dashed border-slate-300 py-1.5 text-xs space-y-0.5">
               <div className="flex justify-between">
-                <span>Invoice No:</span>
-                <span className="font-bold">{checkoutResult.invoice_no}</span>
+                <span>Invoice: <strong>{checkoutResult.invoice_no}</strong></span>
+                <span>Date: {checkoutResult.sale_date}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Date:</span>
-                <span>{checkoutResult.sale_date}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Cashier:</span>
-                <span>{user?.name || 'Operator'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Customer:</span>
-                <span>{checkoutResult.customer?.name || 'Walk-in Customer'}</span>
+              <div className="flex justify-between text-[11px] text-slate-600">
+                <span>Cashier: {user?.name || 'Operator'}</span>
+                <span>Cust: {checkoutResult.customer?.name || 'Walk-in'}</span>
               </div>
             </div>
 
-            <div className="space-y-2 text-xs">
+            {/* Items List (Single Line layout) */}
+            <div className="space-y-1 text-xs">
               <div className="flex justify-between font-bold border-b border-slate-200 pb-1">
                 <span>Item [Qty]</span>
                 <span>Subtotal</span>
               </div>
               
               {checkoutResult.items?.map((item) => (
-                <div key={item.id} className="flex justify-between items-start">
+                <div key={item.id} className="flex justify-between items-center py-0.5">
                   <div className="flex flex-col">
-                    <span>{item.medicine?.name || item.name}</span>
-                    <span className="text-[10px] text-slate-500">
-                      {item.quantity} {item.unit?.abbreviation || item.unit_name} x PKR {Number(item.unit_price).toFixed(2)}
+                    <span>{item.medicine?.name || item.name} [{item.quantity} {item.unit?.abbreviation || item.unit_name}]</span>
+                    <span className="text-[9px] text-slate-400 font-mono">
+                      @ PKR {Number(item.unit_price).toFixed(2)}
                     </span>
                   </div>
-                  <span className="font-semibold">PKR {(item.quantity * item.unit_price).toFixed(2)}</span>
+                  <span className="font-semibold font-mono text-right">
+                    PKR {(item.quantity * item.unit_price).toFixed(2)}
+                  </span>
                 </div>
               ))}
             </div>
 
-            <div className="border-t border-dashed border-slate-300 pt-2 text-xs space-y-1 text-right">
+            {/* Financial Summary (Side-by-Side layout) */}
+            <div className="border-t border-dashed border-slate-300 pt-1.5 text-xs space-y-1">
               <div className="flex justify-between">
-                <span>Subtotal:</span>
-                <span>PKR {Number(checkoutResult.sub_total).toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-slate-600">
-                <span>Tax:</span>
-                <span>PKR {Number(checkoutResult.tax).toFixed(2)}</span>
+                <span>Subtotal: PKR {Number(checkoutResult.sub_total).toFixed(2)}</span>
+                <span>Tax: PKR {Number(checkoutResult.tax).toFixed(2)}</span>
               </div>
               {Number(checkoutResult.discount) > 0 && (
-                <div className="flex justify-between text-red-650">
-                  <span>Discount:</span>
-                  <span>- PKR {Number(checkoutResult.discount).toFixed(2)}</span>
+                <div className="text-right text-red-650 font-mono">
+                  <span>Discount: - PKR {Number(checkoutResult.discount).toFixed(2)}</span>
                 </div>
               )}
-              <div className="flex justify-between font-bold text-sm border-t border-slate-200 pt-1">
+              <div className="flex justify-between font-bold border-t border-b border-slate-200 py-1 my-1">
                 <span>Grand Total:</span>
                 <span>PKR {Number(checkoutResult.grand_total).toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-[11px] text-slate-500 pt-1">
-                <span>Cash Received:</span>
-                <span>PKR {Number(checkoutResult.paid_amount).toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-[11px] text-slate-500">
-                <span>Change Back:</span>
-                <span>PKR {Math.max(0, checkoutResult.paid_amount - checkoutResult.grand_total).toFixed(2)}</span>
+              <div className="flex justify-between text-[11px] text-slate-600">
+                <span>Paid: PKR {Number(checkoutResult.paid_amount).toFixed(2)}</span>
+                <span>Change: PKR {Math.max(0, checkoutResult.paid_amount - checkoutResult.grand_total).toFixed(2)}</span>
               </div>
             </div>
 
-            <div className="text-center text-[10px] text-slate-400 border-t border-dashed border-slate-300 pt-4">
+            {/* Footer */}
+            <div className="text-center text-[10px] text-slate-400 border-t border-dashed border-slate-300 pt-2 leading-tight">
               <p>Thank You For Buying From Us!</p>
               <p>Software Powered by PrimePharm ERP</p>
             </div>

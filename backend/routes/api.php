@@ -10,6 +10,15 @@ use App\Http\Controllers\Api\V1\MedicineController;
 use App\Http\Controllers\Api\V1\MedicineBatchController;
 use App\Http\Controllers\Api\V1\SaleController;
 use App\Http\Controllers\Api\V1\CustomerController;
+use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\SupplierController;
+use App\Http\Controllers\Api\V1\PurchaseController;
+use App\Http\Controllers\Api\V1\ExpenseCategoryController;
+use App\Http\Controllers\Api\V1\ExpenseController;
+use App\Http\Controllers\Api\V1\LedgerController;
+use App\Http\Controllers\Api\V1\CustomerReturnController;
+use App\Http\Controllers\Api\V1\SupplierReturnController;
+use App\Http\Controllers\Api\V1\ReportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -41,6 +50,7 @@ Route::prefix('v1')->group(function () {
         // Session & Profile
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/auth/me', [AuthController::class, 'me']);
+        Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
 
         // Future Module Placeholders (Stubs to outline structure)
         Route::prefix('inventory')->group(function () {
@@ -57,15 +67,21 @@ Route::prefix('v1')->group(function () {
         });
 
         Route::apiResource('customers', CustomerController::class)->only(['index', 'store']);
+        Route::apiResource('suppliers', SupplierController::class);
+        Route::apiResource('returns/customer', CustomerReturnController::class)->only(['index', 'show', 'store']);
+        Route::apiResource('returns/supplier', SupplierReturnController::class)->only(['index', 'show', 'store']);
 
         Route::prefix('purchases')->group(function () {
-            // Route::apiResource('orders', PurchaseController::class);
+            Route::apiResource('orders', PurchaseController::class)->only(['index', 'show', 'store']);
         });
 
+        Route::apiResource('expenses/categories', ExpenseCategoryController::class);
+        Route::apiResource('expenses', ExpenseController::class);
+
         Route::prefix('financials')->group(function () {
-            // Route::apiResource('expenses', ExpenseController::class);
-            // Route::get('/ledgers/supplier/{id}', [LedgerController::class, 'supplier']);
-            // Route::get('/ledgers/customer/{id}', [LedgerController::class, 'customer']);
+            Route::get('/ledgers/supplier/{id}', [LedgerController::class, 'supplier']);
+            Route::get('/ledgers/customer/{id}', [LedgerController::class, 'customer']);
+            Route::get('/reports/summary', [ReportController::class, 'summary']);
         });
     });
 });

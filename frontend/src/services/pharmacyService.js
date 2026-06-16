@@ -73,6 +73,8 @@ export const createPharmacy = async (data) => {
       owner_name: data.owner_name || null,
       owner_email: data.owner_email || null,
       owner_phone: data.owner_phone || null,
+      pharmacy_address: data.pharmacy_address || null,
+      pharmacy_phone: data.pharmacy_phone || null,
       created_at: new Date().toISOString().split('T')[0],
     };
 
@@ -161,6 +163,8 @@ export const updatePharmacy = async (id, data) => {
       owner_name: data.owner_name || mockPharmacies[idx].owner_name,
       owner_email: data.owner_email || mockPharmacies[idx].owner_email,
       owner_phone: data.owner_phone || mockPharmacies[idx].owner_phone,
+      pharmacy_address: data.pharmacy_address !== undefined ? data.pharmacy_address : mockPharmacies[idx].pharmacy_address,
+      pharmacy_phone: data.pharmacy_phone !== undefined ? data.pharmacy_phone : mockPharmacies[idx].pharmacy_phone,
       password: data.password || mockPharmacies[idx].password,
     };
     if (newStatus !== 'trial') {

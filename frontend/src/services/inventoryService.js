@@ -118,6 +118,7 @@ export const getCategories = async () => {
   if (isMockMode()) {
     try {
       await delay(200);
+      mockCategories = getInitialCategories();
       const pharmacyId = getActivePharmacyId();
       return mockCategories.filter((c) => c.pharmacy_id === pharmacyId);
     } catch (error) {
@@ -241,6 +242,7 @@ export const getCompanies = async () => {
   if (isMockMode()) {
     try {
       await delay(200);
+      mockCompanies = getInitialCompanies();
       const pharmacyId = getActivePharmacyId();
       return mockCompanies.filter((comp) => comp.pharmacy_id === pharmacyId);
     } catch (error) {
@@ -366,6 +368,7 @@ export const getUnits = async () => {
   if (isMockMode()) {
     try {
       await delay(200);
+      mockUnits = getInitialUnits();
       const pharmacyId = getActivePharmacyId();
       return mockUnits.filter((u) => u.pharmacy_id === pharmacyId);
     } catch (error) {
@@ -489,6 +492,7 @@ export const getMedicines = async () => {
   if (isMockMode()) {
     try {
       await delay(200);
+      mockMedicines = getInitialMedicines();
       const pharmacyId = getActivePharmacyId();
       const cats = JSON.parse(localStorage.getItem('primepharm_mock_categories') || '[]');
       const comps = JSON.parse(localStorage.getItem('primepharm_mock_companies') || '[]');
@@ -506,6 +510,7 @@ export const getMedicines = async () => {
             ...c,
             from_unit: units.find((u) => u.id === Number(c.from_unit_id))
           })),
+          batches: activeBatches.sort((a, b) => new Date(a.expiry_date) - new Date(b.expiry_date)),
           total_stock: activeBatches.reduce((acc, curr) => acc + Number(curr.remaining_quantity), 0)
         };
       });
@@ -552,7 +557,23 @@ export const createMedicine = async (data) => {
 
       mockMedicines.push(newMed);
       saveMedicines();
-      return newMed;
+
+      const cats = JSON.parse(localStorage.getItem('primepharm_mock_categories') || '[]');
+      const comps = JSON.parse(localStorage.getItem('primepharm_mock_companies') || '[]');
+      const units = JSON.parse(localStorage.getItem('primepharm_mock_units') || '[]');
+
+      return {
+        ...newMed,
+        category: cats.find((c) => c.id === newMed.category_id),
+        company: comps.find((c) => c.id === newMed.company_id),
+        base_unit: units.find((u) => u.id === newMed.base_unit_id),
+        conversions: newMed.conversions.map((c) => ({
+          ...c,
+          from_unit: units.find((u) => u.id === c.from_unit_id)
+        })),
+        batches: [],
+        total_stock: 0
+      };
     } catch (error) {
       console.error('Error creating mock medicine:', error);
       throw error;
@@ -599,7 +620,27 @@ export const updateMedicine = async (id, data) => {
       };
 
       saveMedicines();
-      return mockMedicines[idx];
+
+      const cats = JSON.parse(localStorage.getItem('primepharm_mock_categories') || '[]');
+      const comps = JSON.parse(localStorage.getItem('primepharm_mock_companies') || '[]');
+      const units = JSON.parse(localStorage.getItem('primepharm_mock_units') || '[]');
+      const batches = JSON.parse(localStorage.getItem('primepharm_mock_batches') || '[]');
+      const activeBatches = batches.filter((b) => b.medicine_id === Number(id) && b.status === 'ACTIVE');
+      const totalStock = activeBatches.reduce((acc, curr) => acc + Number(curr.remaining_quantity), 0);
+
+      const updatedMed = mockMedicines[idx];
+      return {
+        ...updatedMed,
+        category: cats.find((c) => c.id === updatedMed.category_id),
+        company: comps.find((c) => c.id === updatedMed.company_id),
+        base_unit: units.find((u) => u.id === updatedMed.base_unit_id),
+        conversions: updatedMed.conversions.map((c) => ({
+          ...c,
+          from_unit: units.find((u) => u.id === c.from_unit_id)
+        })),
+        batches: activeBatches.sort((a, b) => new Date(a.expiry_date) - new Date(b.expiry_date)),
+        total_stock: totalStock
+      };
     } catch (error) {
       console.error('Error updating mock medicine:', error);
       throw error;
@@ -653,6 +694,8 @@ export const getBatches = async () => {
   if (isMockMode()) {
     try {
       await delay(200);
+      mockBatches = getInitialBatches();
+      mockMedicines = getInitialMedicines();
       const pharmacyId = getActivePharmacyId();
       const units = JSON.parse(localStorage.getItem('primepharm_mock_units') || '[]');
 

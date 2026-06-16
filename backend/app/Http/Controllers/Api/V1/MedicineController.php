@@ -16,7 +16,17 @@ class MedicineController extends Controller
      */
     public function index()
     {
-        $medicines = Medicine::with(['category', 'company', 'baseUnit', 'conversions.fromUnit'])
+        $medicines = Medicine::with([
+            'category', 
+            'company', 
+            'baseUnit', 
+            'conversions.fromUnit',
+            'batches' => function ($query) {
+                $query->where('status', 'ACTIVE')
+                      ->where('remaining_quantity', '>', 0)
+                      ->orderBy('expiry_date', 'asc');
+            }
+        ])
             ->withSum('batches as total_stock', 'remaining_quantity')
             ->get();
             
@@ -97,7 +107,17 @@ class MedicineController extends Controller
             DB::commit();
             
             // Reload relationships
-            $medicine->load(['category', 'company', 'baseUnit', 'conversions.fromUnit']);
+            $medicine->load([
+                'category', 
+                'company', 
+                'baseUnit', 
+                'conversions.fromUnit',
+                'batches' => function ($query) {
+                    $query->where('status', 'ACTIVE')
+                          ->where('remaining_quantity', '>', 0)
+                          ->orderBy('expiry_date', 'asc');
+                }
+            ]);
             $medicine->total_stock = 0;
 
             return response()->json($medicine, 201);
@@ -112,7 +132,17 @@ class MedicineController extends Controller
      */
     public function show(Medicine $medicine)
     {
-        $medicine->load(['category', 'company', 'baseUnit', 'conversions.fromUnit']);
+        $medicine->load([
+            'category', 
+            'company', 
+            'baseUnit', 
+            'conversions.fromUnit',
+            'batches' => function ($query) {
+                $query->where('status', 'ACTIVE')
+                      ->where('remaining_quantity', '>', 0)
+                      ->orderBy('expiry_date', 'asc');
+            }
+        ]);
         $medicine->total_stock = (int) $medicine->batches()->sum('remaining_quantity');
         return response()->json($medicine);
     }
@@ -187,7 +217,17 @@ class MedicineController extends Controller
             DB::commit();
 
             // Reload relationships
-            $medicine->load(['category', 'company', 'baseUnit', 'conversions.fromUnit']);
+            $medicine->load([
+                'category', 
+                'company', 
+                'baseUnit', 
+                'conversions.fromUnit',
+                'batches' => function ($query) {
+                    $query->where('status', 'ACTIVE')
+                          ->where('remaining_quantity', '>', 0)
+                          ->orderBy('expiry_date', 'asc');
+                }
+            ]);
             $medicine->total_stock = (int) $medicine->batches()->sum('remaining_quantity');
 
             return response()->json($medicine);

@@ -6,6 +6,13 @@ const STORAGE_CUSTOMERS_KEY = 'primepharm_mock_customers';
 const isMockMode = () => localStorage.getItem('primepharm_auth_mode') === 'mock';
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const getActivePharmacyId = () => {
+  const user = localStorage.getItem('primepharm_user')
+    ? JSON.parse(localStorage.getItem('primepharm_user'))
+    : null;
+  return user ? Number(user.pharmacy_id) : null;
+};
+
 const getInitialSales = () => {
   const stored = localStorage.getItem(STORAGE_SALES_KEY);
   return stored ? JSON.parse(stored) : [];
@@ -13,16 +20,25 @@ const getInitialSales = () => {
 
 const getInitialCustomers = () => {
   const stored = localStorage.getItem(STORAGE_CUSTOMERS_KEY);
-  if (stored) return JSON.parse(stored);
-  
-  // Seed initial customers in mock mode
-  const initial = [
-    { id: 1, name: 'Walk-in Customer', phone: '', email: '', address: '', balance: 0.00 },
-    { id: 2, name: 'Amjad Khan', phone: '0300-1234567', email: 'amjad@gmail.com', address: 'Lahore, Pakistan', balance: 0.00 },
-    { id: 3, name: 'Sarah Ali', phone: '0321-7654321', email: 'sarah@yahoo.com', address: 'Karachi, Pakistan', balance: 1200.00 }
-  ];
-  localStorage.setItem(STORAGE_CUSTOMERS_KEY, JSON.stringify(initial));
-  return initial;
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      // Clean up legacy hardcoded customers
+      const filtered = parsed.filter(
+        (c) => !(c.id === 1 && c.name === 'Walk-in Customer') &&
+               !(c.id === 2 && c.name === 'Amjad Khan') &&
+               !(c.id === 3 && c.name === 'Sarah Ali')
+      );
+      if (filtered.length !== parsed.length) {
+        localStorage.setItem(STORAGE_CUSTOMERS_KEY, JSON.stringify(filtered));
+        return filtered;
+      }
+      return parsed;
+    } catch (e) {
+      console.error('Error parsing mock customers:', e);
+    }
+  }
+  return [];
 };
 
 let mockSales = getInitialSales();
@@ -36,7 +52,8 @@ const saveCustomers = () => { localStorage.setItem(STORAGE_CUSTOMERS_KEY, JSON.s
 export const getCustomers = async () => {
   if (isMockMode()) {
     await delay(150);
-    return [...mockCustomers];
+    const pharmacyId = getActivePharmacyId();
+    return mockCustomers.filter((c) => c.pharmacy_id === pharmacyId || c.pharmacy_id === undefined);
   }
   const response = await api.get('/customers');
   return response.data;
@@ -51,7 +68,8 @@ export const createCustomer = async (data) => {
       phone: data.phone || '',
       email: data.email || '',
       address: data.address || '',
-      balance: 0.00
+      balance: 0.00,
+      pharmacy_id: getActivePharmacyId()
     };
     mockCustomers.push(newCustomer);
     saveCustomers();
@@ -141,27 +159,50 @@ export const checkoutPOS = async (data) => {
     // Save updated batches to localStorage
     localStorage.setItem('primepharm_mock_batches', JSON.stringify(mockBatches));
     
-    // Add customer balance if due/partially paid
-    if (data.customer_id) {
-      const due = data.grand_total - data.paid_amount;
-      if (due > 0) {
-        const custIdx = mockCustomers.findIndex((c) => c.id === Number(data.customer_id));
-        if (custIdx !== -1) {
-          mockCustomers[custIdx].balance += due;
-          saveCustomers();
-        }
-      }
-    }
-    
     const count = mockSales.length + 1;
     const invoiceNo = 'INV-' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '-' + String(count).padStart(4, '0');
     
+    const pharmacyId = getActivePharmacyId();
+    const mockPharms = JSON.parse(localStorage.getItem('primepharm_mock_pharmacies') || '[]');
+    const activePharmacy = mockPharms.find((p) => p.id === pharmacyId);
+
+    // Add customer balance and log ledger entry
+    if (data.customer_id) {
+      const due = data.grand_total - data.paid_amount;
+      const custIdx = mockCustomers.findIndex((c) => c.id === Number(data.customer_id));
+      if (custIdx !== -1) {
+        mockCustomers[custIdx].balance += due;
+        saveCustomers();
+      }
+      
+      const mockCustLedgers = JSON.parse(localStorage.getItem('primepharm_mock_customer_ledgers') || '[]');
+      mockCustLedgers.push({
+        id: Date.now() + Math.random(),
+        pharmacy_id: pharmacyId,
+        customer_id: Number(data.customer_id),
+        transaction_type: 'SALE',
+        transaction_id: Date.now(),
+        transaction_no: invoiceNo,
+        debit: data.grand_total,
+        credit: data.paid_amount,
+        running_balance: custIdx !== -1 ? mockCustomers[custIdx].balance : due,
+        transaction_date: new Date().toISOString().split('T')[0]
+      });
+      localStorage.setItem('primepharm_mock_customer_ledgers', JSON.stringify(mockCustLedgers));
+    }
+
     const newSale = {
       id: Date.now(),
+      pharmacy_id: pharmacyId,
       invoice_no: invoiceNo,
       customer_id: data.customer_id || null,
       customer: mockCustomers.find((c) => c.id === Number(data.customer_id)) || null,
       user: { name: 'Local Operator' },
+      branch: {
+        name: 'Main Branch',
+        address: activePharmacy?.pharmacy_address || 'Multan Road, Lahore, Pakistan',
+        phone: activePharmacy?.pharmacy_phone || '042-35111111'
+      },
       sale_date: new Date().toISOString().split('T')[0],
       sub_total: data.sub_total,
       tax: data.tax || 0.00,
@@ -194,7 +235,8 @@ export const checkoutPOS = async (data) => {
 export const getInvoices = async () => {
   if (isMockMode()) {
     await delay(200);
-    return [...mockSales];
+    const pharmacyId = getActivePharmacyId();
+    return mockSales.filter((s) => s.pharmacy_id === pharmacyId || s.pharmacy_id === undefined || s.pharmacy_id === null);
   }
   const response = await api.get('/sales/invoices');
   return response.data;
@@ -210,3 +252,96 @@ export const getInvoiceDetails = async (id) => {
   const response = await api.get(`/sales/invoices/${id}`);
   return response.data;
 };
+
+export const getDashboardStats = async () => {
+  if (isMockMode()) {
+    await delay(200);
+    const pharmacyId = getActivePharmacyId();
+    
+    // Get mock data from localStorage
+    const mockSales = JSON.parse(localStorage.getItem('primepharm_mock_sales') || '[]');
+    const mockBatches = JSON.parse(localStorage.getItem('primepharm_mock_batches') || '[]');
+    const mockMedicines = JSON.parse(localStorage.getItem('primepharm_mock_medicines') || '[]');
+    const mockPurchases = JSON.parse(localStorage.getItem('primepharm_mock_purchases') || '[]');
+
+    // Filter by pharmacyId
+    const tenantSales = mockSales.filter((s) => s.pharmacy_id === pharmacyId || s.pharmacy_id === undefined || s.pharmacy_id === null);
+    const tenantBatches = mockBatches.filter((b) => b.pharmacy_id === pharmacyId || b.pharmacy_id === undefined || b.pharmacy_id === null);
+    const tenantMedicines = mockMedicines.filter((m) => m.pharmacy_id === pharmacyId || m.pharmacy_id === undefined || m.pharmacy_id === null);
+    const tenantPurchases = mockPurchases.filter((p) => p.pharmacy_id === pharmacyId || p.pharmacy_id === undefined || p.pharmacy_id === null);
+
+    // 1. Sales calculation
+    const todayStr = new Date().toISOString().split('T')[0];
+    const yesterdayDate = new Date();
+    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+    const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
+
+    const todaySales = tenantSales
+      .filter((s) => s.sale_date === todayStr)
+      .reduce((acc, curr) => acc + Number(curr.grand_total), 0);
+
+    const yesterdaySales = tenantSales
+      .filter((s) => s.sale_date === yesterdayStr)
+      .reduce((acc, curr) => acc + Number(curr.grand_total), 0);
+
+    let salesChangePercent = 0;
+    if (yesterdaySales > 0) {
+      salesChangePercent = ((todaySales - yesterdaySales) / yesterdaySales) * 100;
+    } else if (todaySales > 0) {
+      salesChangePercent = 100;
+    }
+
+    let salesChangeStr = '0% from yesterday';
+    if (salesChangePercent > 0) {
+      salesChangeStr = `+${salesChangePercent.toFixed(1)}% from yesterday`;
+    } else if (salesChangePercent < 0) {
+      salesChangeStr = `${salesChangePercent.toFixed(1)}% from yesterday`;
+    }
+
+    // 2. Purchase calculation
+    const totalPurchasesCount = tenantPurchases.length;
+    const currentMonthStr = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+    const thisMonthPurchasesCount = tenantPurchases.filter((p) => {
+      const dateStr = p.purchase_date || p.created_at || '';
+      return dateStr.startsWith(currentMonthStr);
+    }).length;
+
+    // 3. Active Batches count
+    const activeBatchesCount = tenantBatches.filter(
+      (b) => b.status === 'ACTIVE' && Number(b.remaining_quantity) > 0
+    ).length;
+
+    // 4. Low stock alerts
+    let lowStockCount = 0;
+    let criticalWarnings = 0;
+
+    tenantMedicines.forEach((med) => {
+      const stock = tenantBatches
+        .filter((b) => b.medicine_id === med.id && b.status === 'ACTIVE' && Number(b.remaining_quantity) > 0)
+        .reduce((acc, curr) => acc + Number(curr.remaining_quantity), 0);
+
+      const minStock = Number(med.min_stock_level || 0);
+
+      if (stock <= minStock) {
+        lowStockCount++;
+        if (stock === 0 && minStock > 0) {
+          criticalWarnings++;
+        }
+      }
+    });
+
+    return {
+      today_sales: todaySales,
+      today_sales_change: salesChangeStr,
+      purchase_orders: totalPurchasesCount,
+      purchase_orders_this_month: thisMonthPurchasesCount,
+      active_batches: activeBatchesCount,
+      low_stock_alerts: lowStockCount,
+      critical_warnings: criticalWarnings,
+    };
+  }
+
+  const response = await api.get('/dashboard/stats');
+  return response.data;
+};
+

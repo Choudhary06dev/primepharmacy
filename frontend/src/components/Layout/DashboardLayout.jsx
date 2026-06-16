@@ -27,6 +27,7 @@ const DashboardLayout = ({ children }) => {
     { name: 'Expenses', path: '/financials/expenses', icon: '💸' },
     { name: 'Supplier Ledger', path: '/financials/supplier-ledger', icon: '📒' },
     { name: 'Customer Ledger', path: '/financials/customer-ledger', icon: '📗' },
+    { name: 'Analytics & Reports', path: '/financials/reports', icon: '📈' },
     { name: 'Customer Returns', path: '/returns/customer', icon: '🔄' },
     { name: 'Supplier Returns', path: '/returns/supplier', icon: '↩️' },
     { name: 'Branches', path: '/settings/branches', icon: '🏢' },
@@ -163,10 +164,18 @@ const DashboardLayout = ({ children }) => {
             {/* Logout */}
             <button
               onClick={handleLogout}
-              className="rounded-xl px-4 py-2 text-xs font-semibold transition-all"
-              style={{ backgroundColor: 'var(--color-surface-secondary)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border-primary)' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-surface-secondary)'}
+              className="rounded-xl px-4 py-2 text-xs font-semibold transition-all cursor-pointer"
+              style={{ backgroundColor: 'var(--color-surface-secondary)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border-primary)', cursor: 'pointer' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#10b981';
+                e.currentTarget.style.color = '#ffffff';
+                e.currentTarget.style.borderColor = '#10b981';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--color-surface-secondary)';
+                e.currentTarget.style.color = 'var(--color-text-secondary)';
+                e.currentTarget.style.borderColor = 'var(--color-border-primary)';
+              }}
             >
               Logout
             </button>

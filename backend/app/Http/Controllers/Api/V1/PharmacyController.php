@@ -32,6 +32,8 @@ class PharmacyController extends Controller
         $validator = Validator::make($request->all(), [
             'pharmacy_name' => 'required|string|max:150',
             'pharmacy_slug' => 'nullable|string|max:150|unique:pharmacies,slug',
+            'pharmacy_address' => 'nullable|string|max:255',
+            'pharmacy_phone' => 'nullable|string|max:30',
             'name' => 'nullable|string|max:255',
             'email' => 'nullable|string|email|max:255|unique:users,email',
             'password' => 'nullable|string|min:8',
@@ -70,6 +72,8 @@ class PharmacyController extends Controller
         $validator = Validator::make($request->all(), [
             'pharmacy_name' => 'sometimes|string|max:150',
             'pharmacy_slug' => ['sometimes', 'string', 'max:150', Rule::unique('pharmacies', 'slug')->ignore($pharmacy->id)],
+            'pharmacy_address' => 'sometimes|string|max:255',
+            'pharmacy_phone' => 'sometimes|string|max:30',
             'owner_name' => 'sometimes|string|max:255',
             'owner_email' => ['sometimes', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($ownerId)],
             'owner_phone' => 'sometimes|string|max:30',
@@ -149,6 +153,19 @@ class PharmacyController extends Controller
         }
 
         $pharmacy->save();
+
+        $mainBranch = $pharmacy->branches()->where('is_main', true)->first() 
+            ?? $pharmacy->branches()->first();
+        if ($mainBranch) {
+            if (array_key_exists('pharmacy_address', $data)) {
+                $mainBranch->address = $data['pharmacy_address'];
+            }
+            if (array_key_exists('pharmacy_phone', $data)) {
+                $mainBranch->phone = $data['pharmacy_phone'];
+            }
+            $mainBranch->save();
+        }
+
         $pharmacy->load(['plan', 'users.roles']);
 
         return response()->json([
@@ -170,6 +187,8 @@ class PharmacyController extends Controller
     private function formatPharmacy(Pharmacy $pharmacy): array
     {
         $owner = $pharmacy->users->first();
+        $mainBranch = $pharmacy->branches()->where('is_main', true)->first() 
+            ?? $pharmacy->branches()->first();
 
         return [
             'id' => $pharmacy->id,
@@ -181,6 +200,8 @@ class PharmacyController extends Controller
             'owner_name' => $owner?->name,
             'owner_email' => $owner?->email,
             'owner_phone' => $owner?->phone,
+            'pharmacy_address' => $mainBranch?->address,
+            'pharmacy_phone' => $mainBranch?->phone,
             'created_at' => optional($pharmacy->created_at)->toDateString(),
         ];
     }

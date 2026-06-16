@@ -249,11 +249,12 @@ const Medicines = () => {
       label: 'Total Stock',
       render: (val, row) => {
         const baseAbbr = row.base_unit?.abbreviation || 'Base';
-        const isLow = val <= (row.min_stock_level || 0);
+        const stockVal = val ?? 0;
+        const isLow = stockVal <= (row.min_stock_level || 0);
         return (
           <div className="flex flex-col">
             <span className={`text-sm font-bold font-mono ${isLow ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-450'}`}>
-              {val.toLocaleString()} {baseAbbr}
+              {stockVal.toLocaleString()} {baseAbbr}
             </span>
             {isLow && (
               <span className="text-[9px] uppercase tracking-wider text-amber-500 font-bold mt-0.5 flex items-center gap-0.5">

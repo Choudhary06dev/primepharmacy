@@ -12,6 +12,8 @@ import { getRoles } from '../../../services/userService';
 const emptyForm = {
   pharmacy_name: '',
   pharmacy_slug: '',
+  pharmacy_address: '',
+  pharmacy_phone: '',
   status: 'trial',
   trial_days: 30,
   owner_name: '',
@@ -91,6 +93,8 @@ const Pharmacies = () => {
     setFormData({
       pharmacy_name: pharmacy.name || '',
       pharmacy_slug: pharmacy.slug || '',
+      pharmacy_address: pharmacy.pharmacy_address || '',
+      pharmacy_phone: pharmacy.pharmacy_phone || '',
       status: pharmacy.status || 'trial',
       trial_days: calculateRemainingDays(pharmacy.trial_ends_at),
       owner_name: pharmacy.owner_name || '',
@@ -313,6 +317,20 @@ const Pharmacies = () => {
               onChange={handleChange}
               placeholder="e.g. carefirst"
               helpText="Leave blank to auto-generate from name."
+            />
+            <Input
+              label="Pharmacy Address"
+              name="pharmacy_address"
+              value={formData.pharmacy_address}
+              onChange={handleChange}
+              placeholder="e.g. Multan Road, Lahore"
+            />
+            <Input
+              label="Pharmacy Phone / Contact"
+              name="pharmacy_phone"
+              value={formData.pharmacy_phone}
+              onChange={handleChange}
+              placeholder="e.g. 042-35111111"
             />
             <Select
               label="Account Status"

@@ -128,22 +128,33 @@ class SaleController extends Controller
                 }
             }
 
-            // 3. Sync Customer Ledger / Balance if not paid in full
+            // 3. Sync Customer Ledger / Balance if customer selected
             if (!empty($data['customer_id'])) {
                 $customer = Customer::find($data['customer_id']);
                 if ($customer) {
                     $dueAmount = $data['grand_total'] - $data['paid_amount'];
-                    if ($dueAmount > 0) {
-                        $customer->balance += $dueAmount;
-                        $customer->save();
-                    }
+                    $customer->balance += $dueAmount;
+                    $customer->save();
+
+                    // Log customer ledger transaction
+                    \App\Models\CustomerLedger::create([
+                        'pharmacy_id' => auth()->user()->pharmacy_id,
+                        'customer_id' => $customer->id,
+                        'transaction_type' => 'SALE',
+                        'transaction_id' => $sale->id,
+                        'transaction_no' => $sale->invoice_no,
+                        'debit' => $data['grand_total'],
+                        'credit' => $data['paid_amount'],
+                        'running_balance' => $customer->balance,
+                        'transaction_date' => $sale->sale_date,
+                    ]);
                 }
             }
 
             DB::commit();
 
             // Load and return invoice detail
-            $sale->load(['customer', 'user', 'items.medicine', 'items.unit', 'items.batches.batch']);
+            $sale->load(['customer', 'user', 'branch', 'items.medicine', 'items.unit', 'items.batches.batch']);
 
             return response()->json([
                 'message' => 'Sale checkout processed successfully.',
@@ -161,7 +172,7 @@ class SaleController extends Controller
      */
     public function show($id)
     {
-        $sale = Sale::with(['customer', 'user', 'items.medicine.baseUnit', 'items.unit', 'items.batches.batch'])
+        $sale = Sale::with(['customer', 'user', 'branch', 'items.medicine.baseUnit', 'items.unit', 'items.batches.batch'])
             ->findOrFail($id);
             
         return response()->json($sale);

@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getAllowedSidebarPaths, getUserSoftwareRole } from '../../services/userService';
+import logo from '../../assets/logo.png';
 
 const DashboardLayout = ({ children }) => {
   const { user, pharmacy, logout } = useAuth();
@@ -64,7 +65,7 @@ const DashboardLayout = ({ children }) => {
       >
         {/* Logo */}
         <div className="flex h-16 items-center gap-2 px-5 border-b" style={{ borderColor: 'var(--color-border-primary)' }}>
-          <span className="text-2xl flex-shrink-0">⚡</span>
+          <img src={logo} alt="PrimePharm Logo" className="h-8 w-8 object-contain flex-shrink-0 rounded-lg" />
           {sidebarOpen && (
             <span className="font-display text-lg font-bold bg-gradient-to-r from-brand-500 to-brand-700 bg-clip-text text-transparent truncate">
               PrimePharm

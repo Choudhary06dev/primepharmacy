@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+import logo from '../../assets/logo.png';
 
 const Login = () => {
   const { login } = useAuth();
@@ -29,7 +30,7 @@ const Login = () => {
     <div className="flex min-h-screen w-screen items-center justify-center bg-slate-50 dark:bg-slate-950 px-6 font-sans">
       <div className="w-full max-w-md rounded-3xl border border-slate-200 dark:border-slate-900 bg-white dark:bg-slate-900/40 p-8 backdrop-blur-xl shadow-2xl">
         <div className="flex flex-col items-center mb-8">
-          <span className="text-4xl mb-3">⚡</span>
+          <img src={logo} alt="PrimePharm Logo" className="h-16 w-16 object-contain mb-3 rounded-2xl shadow-md" />
           <h2 className="text-3xl font-bold font-display bg-gradient-to-r from-brand-500 to-brand-700 bg-clip-text text-transparent">
             Welcome Back
           </h2>

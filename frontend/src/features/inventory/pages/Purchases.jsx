@@ -7,7 +7,7 @@ import Select from '../../../components/UI/Select';
 import Modal from '../../../components/UI/Modal';
 import { getPurchases, getPurchaseDetails, createPurchase } from '../../../services/purchasesService';
 import { getSuppliers } from '../../../services/suppliersService';
-import { getMedicines, getUnits } from '../../../services/inventoryService';
+import { getMedicines, getUnits, getCategories, getCompanies, createMedicine } from '../../../services/inventoryService';
 
 const Purchases = () => {
   const [purchases, setPurchases] = useState([]);
@@ -35,6 +35,64 @@ const Purchases = () => {
   // Items list in the new purchase cart
   const [items, setItems] = useState([]);
 
+  // Quick Add Medicine Modal States
+  const [categories, setCategories] = useState([]);
+  const [companies, setCompanies] = useState([]);
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [quickAddForm, setQuickAddForm] = useState({
+    name: '',
+    generic_name: '',
+    category_id: '',
+    company_id: '',
+    base_unit_id: '',
+    barcode: '',
+    sku: '',
+    min_stock_level: 0,
+  });
+  const [quickAddError, setQuickAddError] = useState(null);
+  const [quickAdding, setQuickAdding] = useState(false);
+
+  const handleQuickAddSubmit = async () => {
+    setQuickAddError(null);
+    if (!quickAddForm.name || !quickAddForm.category_id || !quickAddForm.company_id || !quickAddForm.base_unit_id) {
+      setQuickAddError('Please fill out all required fields (Name, Category, Company, and Base Unit).');
+      return;
+    }
+
+    setQuickAdding(true);
+    try {
+      const payload = {
+        name: quickAddForm.name,
+        generic_name: quickAddForm.generic_name,
+        category_id: Number(quickAddForm.category_id),
+        company_id: Number(quickAddForm.company_id),
+        base_unit_id: Number(quickAddForm.base_unit_id),
+        sku: quickAddForm.sku || undefined,
+        barcode: quickAddForm.barcode || undefined,
+        min_stock_level: Number(quickAddForm.min_stock_level || 0),
+        is_active: true,
+        conversions: [],
+      };
+
+      const newMedicine = await createMedicine(payload);
+      
+      // Add the new medicine to the local list
+      setMedicines((prev) => [...prev, newMedicine]);
+      
+      // Auto-select the newly added medicine
+      setSelectedMedId(newMedicine.id.toString());
+      
+      // Close the modal
+      setIsQuickAddOpen(false);
+      
+      showToast(`Medicine "${newMedicine.name}" created and selected.`);
+    } catch (err) {
+      setQuickAddError(err.message || 'Failed to create medicine.');
+    } finally {
+      setQuickAdding(false);
+    }
+  };
+
   // Selected item form in the modal
   const [selectedMedId, setSelectedMedId] = useState('');
   const [selectedMed, setSelectedMed] = useState(null);
@@ -58,16 +116,20 @@ const Purchases = () => {
     setLoading(true);
     setError(null);
     try {
-      const [purchData, supData, medData, unitsData] = await Promise.all([
+      const [purchData, supData, medData, unitsData, catsData, compsData] = await Promise.all([
         getPurchases(),
         getSuppliers(),
         getMedicines(),
         getUnits(),
+        getCategories(),
+        getCompanies(),
       ]);
       setPurchases(purchData);
       setSuppliers(supData);
       setMedicines(medData.filter((m) => m.is_active));
       setUnits(unitsData);
+      setCategories(catsData);
+      setCompanies(compsData);
     } catch (err) {
       console.error(err);
       setError('Failed to load purchases configuration database. Please try again.');
@@ -441,13 +503,39 @@ const Purchases = () => {
               Add Line Item
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Select
-                label="Select Medicine"
-                value={selectedMedId}
-                onChange={(e) => setSelectedMedId(e.target.value)}
-                options={medicines.map((m) => ({ value: m.id, label: m.name }))}
-                emptyOptionLabel="-- Select Product --"
-              />
+              <div className="flex flex-col gap-1.5 w-full">
+                <div className="flex justify-between items-center -mb-1">
+                  <label className="block text-xs font-semibold text-black dark:text-slate-400 uppercase tracking-wider">
+                    Select Medicine
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuickAddForm({
+                        name: '',
+                        generic_name: '',
+                        category_id: categories[0]?.id || '',
+                        company_id: companies[0]?.id || '',
+                        base_unit_id: units[0]?.id || '',
+                        barcode: '',
+                        sku: '',
+                        min_stock_level: 0,
+                      });
+                      setQuickAddError(null);
+                      setIsQuickAddOpen(true);
+                    }}
+                    className="text-[10px] font-bold text-brand-600 dark:text-brand-400 hover:underline cursor-pointer"
+                  >
+                    + Quick Add
+                  </button>
+                </div>
+                <Select
+                  value={selectedMedId}
+                  onChange={(e) => setSelectedMedId(e.target.value)}
+                  options={medicines.map((m) => ({ value: m.id, label: m.name }))}
+                  emptyOption="-- Select Product --"
+                />
+              </div>
               <Select
                 label="Selected Unit"
                 value={selectedUnitId}
@@ -739,6 +827,99 @@ const Purchases = () => {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Quick Add Medicine Modal */}
+      <Modal
+        isOpen={isQuickAddOpen}
+        onClose={() => setIsQuickAddOpen(false)}
+        title="Quick Add Medicine"
+        size="md"
+        footer={
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setIsQuickAddOpen(false)} disabled={quickAdding}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={handleQuickAddSubmit} disabled={quickAdding}>
+              {quickAdding ? 'Saving...' : 'Save Product'}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          {quickAddError && (
+            <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-4 text-xs font-medium text-red-650 dark:text-red-400">
+              ⚠️ {quickAddError}
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Medicine Name *"
+              value={quickAddForm.name}
+              onChange={(e) => setQuickAddForm((prev) => ({ ...prev, name: e.target.value }))}
+              required
+              placeholder="e.g. Panadol 500mg"
+            />
+            <Input
+              label="Generic Name / Formula"
+              value={quickAddForm.generic_name}
+              onChange={(e) => setQuickAddForm((prev) => ({ ...prev, generic_name: e.target.value }))}
+              placeholder="e.g. Paracetamol"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Select
+              label="Category *"
+              value={quickAddForm.category_id}
+              onChange={(e) => setQuickAddForm((prev) => ({ ...prev, category_id: e.target.value }))}
+              options={categories.map((c) => ({ value: c.id, label: c.name }))}
+              required
+              emptyOption="-- Select Category --"
+            />
+            <Select
+              label="Company / Manufacturer *"
+              value={quickAddForm.company_id}
+              onChange={(e) => setQuickAddForm((prev) => ({ ...prev, company_id: e.target.value }))}
+              options={companies.map((c) => ({ value: c.id, label: c.name }))}
+              required
+              emptyOption="-- Select Company --"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Select
+              label="Base Unit *"
+              value={quickAddForm.base_unit_id}
+              onChange={(e) => setQuickAddForm((prev) => ({ ...prev, base_unit_id: e.target.value }))}
+              options={units.map((u) => ({ value: u.id, label: `${u.name} (${u.abbreviation})` }))}
+              required
+              emptyOption="-- Select Unit --"
+            />
+            <Input
+              label="Min Stock Level"
+              type="number"
+              value={quickAddForm.min_stock_level}
+              onChange={(e) => setQuickAddForm((prev) => ({ ...prev, min_stock_level: Math.max(0, Number(e.target.value)) }))}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="SKU"
+              value={quickAddForm.sku}
+              onChange={(e) => setQuickAddForm((prev) => ({ ...prev, sku: e.target.value }))}
+              placeholder="Auto-generated if empty"
+            />
+            <Input
+              label="Barcode"
+              value={quickAddForm.barcode}
+              onChange={(e) => setQuickAddForm((prev) => ({ ...prev, barcode: e.target.value }))}
+              placeholder="e.g. 50123456789"
+            />
+          </div>
+        </div>
       </Modal>
     </div>
   );

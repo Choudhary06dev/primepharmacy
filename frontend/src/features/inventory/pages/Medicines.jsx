@@ -116,7 +116,7 @@ const Medicines = () => {
     // Select first multiple unit that isn't the base unit
     const baseUnitId = Number(formData.base_unit_id);
     const availableUnit = units.find(u => u.id !== baseUnitId && u.type === 'Multiple') || units.find(u => u.id !== baseUnitId);
-    
+
     if (!availableUnit) {
       alert('Please configure at least one other unit of measure first.');
       return;

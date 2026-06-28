@@ -185,7 +185,9 @@ const DashboardLayout = ({ children }) => {
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto p-6" style={{ backgroundColor: 'var(--color-surface-secondary)' }}>
-          {children}
+          <div key={location.pathname} className="page-animate">
+            {children}
+          </div>
         </main>
       </div>
     </div>

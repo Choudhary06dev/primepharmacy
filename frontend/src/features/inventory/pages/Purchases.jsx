@@ -4,6 +4,7 @@ import DataTable from '../../../components/DataTable';
 import Button from '../../../components/UI/Button';
 import Input from '../../../components/UI/Input';
 import Select from '../../../components/UI/Select';
+import SearchableSelect from '../../../components/UI/SearchableSelect';
 import Modal from '../../../components/UI/Modal';
 import { getPurchases, getPurchaseDetails, createPurchase } from '../../../services/purchasesService';
 import { getSuppliers } from '../../../services/suppliersService';
@@ -529,11 +530,11 @@ const Purchases = () => {
                     + Quick Add
                   </button>
                 </div>
-                <Select
+                <SearchableSelect
                   value={selectedMedId}
                   onChange={(e) => setSelectedMedId(e.target.value)}
                   options={medicines.map((m) => ({ value: m.id, label: m.name }))}
-                  emptyOption="-- Select Product --"
+                  placeholder="Type to search product..."
                 />
               </div>
               <Select

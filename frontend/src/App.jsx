@@ -16,6 +16,7 @@ import Batches from './features/inventory/pages/Batches';
 import Pos from './features/sales/pages/Pos';
 import Sales from './features/sales/pages/Sales';
 import Suppliers from './features/inventory/pages/Suppliers';
+import Customers from './features/inventory/pages/Customers';
 import Purchases from './features/inventory/pages/Purchases';
 import Expenses from './features/financials/pages/Expenses';
 import Ledgers from './features/financials/pages/Ledgers';
@@ -52,6 +53,7 @@ function App() {
                     <Route path="/sales" element={<Sales />} />
                     <Route path="/purchases" element={<Purchases />} />
                     <Route path="/partners/suppliers" element={<Suppliers />} />
+                    <Route path="/partners/customers" element={<Customers />} />
                     <Route path="/financials/expenses" element={<Expenses />} />
                     <Route path="/financials/supplier-ledger" element={<Ledgers />} />
                     <Route path="/financials/customer-ledger" element={<Ledgers />} />

@@ -3,6 +3,7 @@ import PageHeader from '../../../components/PageHeader';
 import Button from '../../../components/UI/Button';
 import Input from '../../../components/UI/Input';
 import Select from '../../../components/UI/Select';
+import SearchableSelect from '../../../components/UI/SearchableSelect';
 import Modal from '../../../components/UI/Modal';
 import { getMedicines, getUnits } from '../../../services/inventoryService';
 import { getCustomers, createCustomer, checkoutPOS } from '../../../services/salesService';
@@ -282,7 +283,7 @@ const Pos = () => {
               </h3>
               
               <div className="space-y-4">
-                <Select
+                <SearchableSelect
                   label="Search Medicine / Generic barcode"
                   value={selectedMedId}
                   onChange={(e) => setSelectedMedId(e.target.value)}
@@ -290,6 +291,7 @@ const Pos = () => {
                     value: m.id, 
                     label: `${m.name} | ${m.generic_name || 'Generic'} [Stock: ${m.total_stock} ${m.base_unit?.abbreviation}]` 
                   }))}
+                  placeholder="Type to search medicine..."
                   helpText="Type and search product name or generic composition."
                 />
 
@@ -606,7 +608,7 @@ const Pos = () => {
           >
             {/* Header */}
             <div className="text-center">
-              <h2 className="text-lg font-bold font-display leading-tight">{checkoutResult.branch?.name || pharmacy?.name || 'PrimePharm ERP'}</h2>
+              <h2 className="text-lg font-bold font-display leading-tight">{pharmacy?.name || checkoutResult.pharmacy?.name || checkoutResult.branch?.name || 'PrimePharm ERP'}</h2>
               <p className="text-[10px] text-slate-500 leading-tight">{checkoutResult.branch?.address || 'Multan Road, Lahore, Pakistan'}</p>
               {checkoutResult.branch?.phone && (
                 <p className="text-[10px] text-slate-400 font-mono leading-none">Phone: {checkoutResult.branch.phone}</p>

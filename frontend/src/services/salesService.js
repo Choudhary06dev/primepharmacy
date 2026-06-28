@@ -1,4 +1,5 @@
 import api from './api';
+import { getInitialMedicines } from './inventoryService';
 
 const STORAGE_SALES_KEY = 'primepharm_mock_sales';
 const STORAGE_CUSTOMERS_KEY = 'primepharm_mock_customers';
@@ -87,6 +88,59 @@ export const createCustomer = async (data) => {
   }
 };
 
+export const updateCustomer = async (id, data) => {
+  if (isMockMode()) {
+    await delay(200);
+    const idx = mockCustomers.findIndex((c) => c.id === Number(id));
+    if (idx === -1) throw new Error('Customer not found.');
+
+    mockCustomers[idx] = {
+      ...mockCustomers[idx],
+      name: data.name,
+      phone: data.phone || '',
+      email: data.email || '',
+      address: data.address || '',
+    };
+    saveCustomers();
+    return mockCustomers[idx];
+  }
+
+  try {
+    const response = await api.put(`/customers/${id}`, data);
+    return response.data;
+  } catch (error) {
+    const errorMsg = error.response?.data?.errors
+      ? Object.values(error.response.data.errors).flat().join(' ')
+      : error.response?.data?.message || 'Failed to update customer.';
+    throw new Error(errorMsg);
+  }
+};
+
+export const deleteCustomer = async (id) => {
+  if (isMockMode()) {
+    await delay(150);
+    const idx = mockCustomers.findIndex((c) => c.id === Number(id));
+    if (idx === -1) throw new Error('Customer not found.');
+
+    // Restrict if there are sales linked in mockSales
+    const hasSales = mockSales.some((s) => Number(s.customer_id) === Number(id));
+    if (hasSales) {
+      throw new Error('Cannot delete customer: they have associated sales invoices.');
+    }
+
+    mockCustomers.splice(idx, 1);
+    saveCustomers();
+    return { success: true };
+  }
+
+  try {
+    const response = await api.delete(`/customers/${id}`);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || 'Failed to delete customer.');
+  }
+};
+
 // ─── POS BILLING & CHECKOUT ────────────────────────────────────────────
 
 export const checkoutPOS = async (data) => {
@@ -95,7 +149,7 @@ export const checkoutPOS = async (data) => {
     
     // Deduct mock stock batches using FEFO
     const mockBatches = JSON.parse(localStorage.getItem('primepharm_mock_batches') || '[]');
-    const mockMedicines = JSON.parse(localStorage.getItem('primepharm_mock_medicines') || '[]');
+    const mockMedicines = getInitialMedicines();
     const mockUnits = JSON.parse(localStorage.getItem('primepharm_mock_units') || '[]');
     
     const processedItems = [];
@@ -261,7 +315,7 @@ export const getDashboardStats = async () => {
     // Get mock data from localStorage
     const mockSales = JSON.parse(localStorage.getItem('primepharm_mock_sales') || '[]');
     const mockBatches = JSON.parse(localStorage.getItem('primepharm_mock_batches') || '[]');
-    const mockMedicines = JSON.parse(localStorage.getItem('primepharm_mock_medicines') || '[]');
+    const mockMedicines = getInitialMedicines();
     const mockPurchases = JSON.parse(localStorage.getItem('primepharm_mock_purchases') || '[]');
 
     // Filter by pharmacyId

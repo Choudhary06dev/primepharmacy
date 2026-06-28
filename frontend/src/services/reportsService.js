@@ -1,4 +1,5 @@
 import api from './api';
+import { getInitialMedicines } from './inventoryService';
 
 const isMockMode = () => localStorage.getItem('primepharm_auth_mode') === 'mock';
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -19,7 +20,7 @@ export const getReportsSummary = async (filters = {}) => {
     const mockSales = JSON.parse(localStorage.getItem('primepharm_mock_sales') || '[]');
     const mockExpenses = JSON.parse(localStorage.getItem('primepharm_mock_expenses') || '[]');
     const mockBatches = JSON.parse(localStorage.getItem('primepharm_mock_batches') || '[]');
-    const mockMedicines = JSON.parse(localStorage.getItem('primepharm_mock_medicines') || '[]');
+    const mockMedicines = getInitialMedicines();
     const mockCategories = JSON.parse(localStorage.getItem('primepharm_mock_expense_categories') || '[]');
 
     const tenantSales = mockSales.filter((s) => s.pharmacy_id === pharmacyId || s.pharmacy_id === undefined || s.pharmacy_id === null);

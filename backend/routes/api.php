@@ -66,7 +66,7 @@ Route::prefix('v1')->group(function () {
             Route::apiResource('invoices', SaleController::class)->only(['index', 'show', 'store']);
         });
 
-        Route::apiResource('customers', CustomerController::class)->only(['index', 'store']);
+        Route::apiResource('customers', CustomerController::class);
         Route::apiResource('suppliers', SupplierController::class);
         Route::apiResource('returns/customer', CustomerReturnController::class)->only(['index', 'show', 'store']);
         Route::apiResource('returns/supplier', SupplierReturnController::class)->only(['index', 'show', 'store']);

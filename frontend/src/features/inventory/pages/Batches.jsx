@@ -4,6 +4,7 @@ import DataTable from '../../../components/DataTable';
 import Button from '../../../components/UI/Button';
 import Input from '../../../components/UI/Input';
 import Select from '../../../components/UI/Select';
+import SearchableSelect from '../../../components/UI/SearchableSelect';
 import Modal from '../../../components/UI/Modal';
 import { getBatches, createBatch, updateBatch, deleteBatch, getMedicines } from '../../../services/inventoryService';
 
@@ -60,7 +61,7 @@ const Batches = () => {
       return;
     }
     setFormData({
-      medicine_id: medicines[0]?.id || '',
+      medicine_id: '',
       batch_no: '',
       expiry_date: '',
       purchase_price: 0.00,
@@ -328,23 +329,15 @@ const Batches = () => {
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {!isEditMode ? (
-              <Select
-                label="Select Medicine Product"
-                name="medicine_id"
-                required
-                value={formData.medicine_id}
-                onChange={handleFormChange}
-                options={medicines.map(m => ({ value: m.id, label: `${m.name} (${m.sku})` }))}
-                emptyOption={false}
-              />
-            ) : (
-              <Input
-                label="Medicine Product"
-                value={medicines.find(m => m.id === formData.medicine_id)?.name || 'Product'}
-                disabled
-              />
-            )}
+            <SearchableSelect
+              label="Select Medicine Product"
+              name="medicine_id"
+              required
+              value={formData.medicine_id}
+              onChange={handleFormChange}
+              options={medicines.map(m => ({ value: m.id, label: `${m.name} (${m.sku})` }))}
+              placeholder="Type medicine name or SKU..."
+            />
 
             <Input
               label="Batch Code/Number"

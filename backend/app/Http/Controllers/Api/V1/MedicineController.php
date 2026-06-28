@@ -28,6 +28,7 @@ class MedicineController extends Controller
             }
         ])
             ->withSum('batches as total_stock', 'remaining_quantity')
+            ->orderBy('name', 'asc')
             ->get();
             
         // Map to ensure total_stock is numeric and defaults to 0 if null
@@ -158,7 +159,7 @@ class MedicineController extends Controller
             'name' => 'required|string|max:150',
             'generic_name' => 'nullable|string|max:150',
             'sku' => [
-                'required',
+                'nullable',
                 'string',
                 'max:100',
                 Rule::unique('medicines')->where(function ($query) {
@@ -194,7 +195,7 @@ class MedicineController extends Controller
                 'company_id' => $data['company_id'],
                 'name' => $data['name'],
                 'generic_name' => $data['generic_name'] ?? null,
-                'sku' => $data['sku'],
+                'sku' => $data['sku'] ?? $medicine->sku ?? 'SKU-' . time() . rand(10, 99),
                 'barcode' => $data['barcode'] ?? null,
                 'min_stock_level' => $data['min_stock_level'] ?? 0,
                 'base_unit_id' => $data['base_unit_id'],

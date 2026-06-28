@@ -71,6 +71,7 @@ class MedicineBatchController extends Controller
     public function update(Request $request, MedicineBatch $batch)
     {
         $validator = Validator::make($request->all(), [
+            'medicine_id' => 'required|exists:medicines,id',
             'batch_no' => 'required|string|max:100',
             'expiry_date' => 'required|date',
             'purchase_price' => 'required|numeric|min:0',

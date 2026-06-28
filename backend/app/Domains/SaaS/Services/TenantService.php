@@ -57,6 +57,10 @@ class TenantService
                 setPermissionsTeamId((int) $pharmacy->id);
             }
 
+            // Pre-seed master Pakistani medicines database for the tenant
+            $seeder = new \Database\Seeders\MasterMedicinesSeeder();
+            $seeder->runForTenant($pharmacy->id);
+
             // 4. Create User (Owner) conditionally
             $user = null;
             if (!empty($data['email'])) {

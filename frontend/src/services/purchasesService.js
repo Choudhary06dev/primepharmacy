@@ -1,4 +1,5 @@
 import api from './api';
+import { getInitialMedicines } from './inventoryService';
 
 const STORAGE_KEY = 'primepharm_mock_purchases';
 
@@ -47,7 +48,7 @@ export const createPurchase = async (data) => {
     const branchId = 1;
     
     const mockBatches = JSON.parse(localStorage.getItem('primepharm_mock_batches') || '[]');
-    const mockMedicines = JSON.parse(localStorage.getItem('primepharm_mock_medicines') || '[]');
+    const mockMedicines = getInitialMedicines();
     const mockUnits = JSON.parse(localStorage.getItem('primepharm_mock_units') || '[]');
     const mockSuppliers = JSON.parse(localStorage.getItem('primepharm_mock_suppliers') || '[]');
     const mockLedgers = JSON.parse(localStorage.getItem('primepharm_mock_supplier_ledgers') || '[]');

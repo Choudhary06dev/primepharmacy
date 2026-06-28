@@ -230,8 +230,10 @@ const Medicines = () => {
       render: (val, row) => {
         const baseAbbr = row.base_unit?.abbreviation || 'PCS';
         return (
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-bold text-slate-600 dark:text-slate-450 font-mono">1 {baseAbbr} (Base)</span>
+          <div className="flex flex-wrap gap-1.5 items-center max-w-[280px]">
+            <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-zinc-700 font-mono">
+              1 {baseAbbr} (Base)
+            </span>
             {(val || []).map((c) => {
               const abbr = c.from_unit?.abbreviation || 'Unit';
               return (

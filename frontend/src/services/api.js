@@ -28,6 +28,16 @@ api.interceptors.request.use(
   }
 );
 
+// Helper to perform safe relative redirects only, preventing Open Redirect vulnerabilities
+const safeRedirect = (path) => {
+  // Ensure the path is relative (starts with '/' and not followed by another '/' or '\')
+  if (typeof path === 'string' && path.startsWith('/') && !path.startsWith('//') && !path.startsWith('\\')) {
+    window.location.href = path;
+  } else {
+    window.location.href = '/login';
+  }
+};
+
 // Response interceptor to handle authentication and subscription failures
 api.interceptors.response.use(
   (response) => response,
@@ -43,7 +53,7 @@ api.interceptors.response.use(
         
         // Redirect to login page only if not already there
         if (!window.location.pathname.includes('/login')) {
-          window.location.href = '/login';
+          safeRedirect('/login');
         }
       }
     }

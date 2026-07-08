@@ -12,6 +12,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Global security headers on every response
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+
         $middleware->alias([
             'tenant' => \App\Http\Middleware\IdentifyTenant::class,
             'subscription' => \App\Http\Middleware\CheckSubscription::class,

@@ -14,7 +14,7 @@ class LedgerController extends Controller
     /**
      * Get transaction ledger for a supplier.
      */
-    public function supplier($id)
+    public function supplier(int $id)
     {
         $supplier = Supplier::findOrFail($id);
         
@@ -32,7 +32,7 @@ class LedgerController extends Controller
     /**
      * Get transaction ledger for a customer.
      */
-    public function customer($id)
+    public function customer(int $id)
     {
         $customer = Customer::findOrFail($id);
         

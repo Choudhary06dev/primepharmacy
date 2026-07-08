@@ -17,6 +17,11 @@ class ReportController extends Controller
      */
     public function summary(Request $request)
     {
+        $request->validate([
+            'start_date' => 'nullable|date_format:Y-m-d',
+            'end_date'   => 'nullable|date_format:Y-m-d|after_or_equal:start_date',
+        ]);
+
         $pharmacyId = auth()->user()->pharmacy_id;
         $startDate = $request->query('start_date');
         $endDate = $request->query('end_date');

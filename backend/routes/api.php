@@ -32,12 +32,14 @@ use App\Http\Controllers\Api\V1\ReportController;
 
 Route::prefix('v1')->group(function () {
 
-    // Public Guest Routes
-    Route::post('/auth/login', [AuthController::class, 'login']);
-    Route::post('/auth/register', [AuthController::class, 'register']);
+    // Public Guest Routes (Throttled for brute-force protection)
+    Route::middleware('throttle:login')->group(function () {
+        Route::post('/auth/login', [AuthController::class, 'login']);
+        Route::post('/auth/register', [AuthController::class, 'register']);
+    });
 
     // Global routes. These are not tenant-scoped.
-    Route::middleware(['auth:sanctum'])->group(function () {
+    Route::middleware(['auth:sanctum', 'throttle:api_general'])->group(function () {
         Route::get('/pharmacies', [PharmacyController::class, 'index']);
         Route::post('/pharmacies', [PharmacyController::class, 'store']);
         Route::put('/pharmacies/{pharmacy}', [PharmacyController::class, 'update']);
@@ -47,13 +49,17 @@ Route::prefix('v1')->group(function () {
     // Authenticated Tenant-Scoped & Subscription-Gated Routes
     Route::middleware(['auth:sanctum', 'tenant', 'subscription'])->group(function () {
 
-        // Session & Profile
-        Route::post('/auth/logout', [AuthController::class, 'logout']);
-        Route::get('/auth/me', [AuthController::class, 'me']);
-        Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
+        // Session & Profile (General Limit)
+        Route::middleware('throttle:api_general')->group(function () {
+            Route::post('/auth/logout', [AuthController::class, 'logout']);
+            Route::get('/auth/me', [AuthController::class, 'me']);
+        });
 
-        // Future Module Placeholders (Stubs to outline structure)
-        Route::prefix('inventory')->group(function () {
+        // Dashboard Stats (Protected by reports limit due to database load)
+        Route::get('/dashboard/stats', [DashboardController::class, 'stats'])->middleware('throttle:api_reports');
+
+        // Inventory Modules (General Limit)
+        Route::prefix('inventory')->middleware('throttle:api_general')->group(function () {
             Route::apiResource('categories', CategoryController::class);
             Route::apiResource('companies', CompanyController::class);
             Route::apiResource('units', UnitController::class);
@@ -61,24 +67,30 @@ Route::prefix('v1')->group(function () {
             Route::apiResource('batches', MedicineBatchController::class);
         });
 
+        // POS & Invoicing
         Route::prefix('sales')->group(function () {
-            Route::post('/pos', [SaleController::class, 'store']);
-            Route::apiResource('invoices', SaleController::class)->only(['index', 'show', 'store']);
+            // Highly resilient throttle for cashier checkout activity
+            Route::post('/pos', [SaleController::class, 'store'])->middleware('throttle:api_pos');
+            Route::apiResource('invoices', SaleController::class)->only(['index', 'show', 'store'])->middleware('throttle:api_general');
         });
 
-        Route::apiResource('customers', CustomerController::class);
-        Route::apiResource('suppliers', SupplierController::class);
-        Route::apiResource('returns/customer', CustomerReturnController::class)->only(['index', 'show', 'store']);
-        Route::apiResource('returns/supplier', SupplierReturnController::class)->only(['index', 'show', 'store']);
+        // General ERP Resources (General Limit)
+        Route::middleware('throttle:api_general')->group(function () {
+            Route::apiResource('customers', CustomerController::class);
+            Route::apiResource('suppliers', SupplierController::class);
+            Route::apiResource('returns/customer', CustomerReturnController::class)->only(['index', 'show', 'store']);
+            Route::apiResource('returns/supplier', SupplierReturnController::class)->only(['index', 'show', 'store']);
 
-        Route::prefix('purchases')->group(function () {
-            Route::apiResource('orders', PurchaseController::class)->only(['index', 'show', 'store']);
+            Route::prefix('purchases')->group(function () {
+                Route::apiResource('orders', PurchaseController::class)->only(['index', 'show', 'store']);
+            });
+
+            Route::apiResource('expenses/categories', ExpenseCategoryController::class)->names('expenses.categories');
+            Route::apiResource('expenses', ExpenseController::class);
         });
 
-        Route::apiResource('expenses/categories', ExpenseCategoryController::class)->names('expenses.categories');
-        Route::apiResource('expenses', ExpenseController::class);
-
-        Route::prefix('financials')->group(function () {
+        // Financials & Heavy Calculation Reports (Tight Rate Limit)
+        Route::prefix('financials')->middleware('throttle:api_reports')->group(function () {
             Route::get('/ledgers/supplier/{id}', [LedgerController::class, 'supplier']);
             Route::get('/ledgers/customer/{id}', [LedgerController::class, 'customer']);
             Route::get('/reports/summary', [ReportController::class, 'summary']);

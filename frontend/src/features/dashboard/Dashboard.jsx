@@ -38,6 +38,12 @@ const getGreeting = () => {
 const formatCurrency = (v) =>
   `PKR ${Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+const formatYAxisVal = (val) => {
+  if (val >= 1000000) return `PKR ${(val / 1000000).toFixed(1)}M`;
+  if (val >= 1000) return `PKR ${(val / 1000).toFixed(1)}K`;
+  return `PKR ${val.toFixed(0)}`;
+};
+
 /* ═══════════════════════════ DASHBOARD COMPONENT ═══════════════════════ */
 const Dashboard = () => {
   const { user, pharmacy } = useAuth();
@@ -50,6 +56,53 @@ const Dashboard = () => {
   const [supplierCount, setSupplierCount] = useState(0);
   const [expiringBatches, setExpiringBatches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [hoveredPoint, setHoveredPoint] = useState(null);
+
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [finLoading, setFinLoading] = useState(false);
+
+  const getDateRangeForFilter = (filterType) => {
+    const now = new Date();
+    const formatDate = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const end_date = formatDate(now);
+    let start_date = '';
+
+    if (filterType === 'today') {
+      start_date = formatDate(now);
+    } else if (filterType === '7days') {
+      const past = new Date();
+      past.setDate(now.getDate() - 6);
+      start_date = formatDate(past);
+    } else if (filterType === '30days') {
+      const past = new Date();
+      past.setDate(now.getDate() - 29);
+      start_date = formatDate(past);
+    } else {
+      return {};
+    }
+
+    return { start_date, end_date };
+  };
+
+  const handleFilterChange = async (filterType) => {
+    setActiveFilter(filterType);
+    setFinLoading(true);
+    try {
+      const range = getDateRangeForFilter(filterType);
+      const res = await getReportsSummary(range);
+      setReportsData(res);
+    } catch (err) {
+      console.error('Failed to refetch reports summary:', err);
+    } finally {
+      setFinLoading(false);
+    }
+  };
 
   /* ── Fetch all data in parallel ── */
   useEffect(() => {
@@ -68,7 +121,7 @@ const Dashboard = () => {
 
         if (stats.status === 'fulfilled') setStatsData(stats.value);
         if (reports.status === 'fulfilled') setReportsData(reports.value);
-        if (invoices.status === 'fulfilled') setRecentSales((invoices.value || []).slice(0, 5));
+        if (invoices.status === 'fulfilled') setRecentSales((invoices.value || []).slice(0, 2));
         if (customers.status === 'fulfilled') setCustomerCount((customers.value || []).length);
         if (suppliers.status === 'fulfilled') setSupplierCount((suppliers.value || []).length);
 
@@ -119,6 +172,55 @@ const Dashboard = () => {
 
   const maxMonthly = Math.max(...monthlyTrend.map(m => m.sales), 1);
 
+  const chartPoints = React.useMemo(() => {
+    if (!monthlyTrend || monthlyTrend.length === 0) return [];
+    const maxVal = Math.max(...monthlyTrend.map((t) => t.sales), 10);
+    const svgWidth = 500;
+    const svgHeight = 240;
+    const paddingLeft = 50;
+    const paddingRight = 20;
+    const paddingTop = 15;
+    const paddingBottom = 35;
+
+    const chartWidth = svgWidth - paddingLeft - paddingRight;
+    const chartHeight = svgHeight - paddingTop - paddingBottom;
+    const segmentWidth = chartWidth / (monthlyTrend.length || 1);
+
+    return monthlyTrend.map((t, idx) => {
+      const x_center = paddingLeft + idx * segmentWidth + segmentWidth / 2;
+      const barWidth = 32;
+      const x = x_center - barWidth / 2;
+
+      const pct = t.sales / maxVal;
+      const barHeight = pct * chartHeight;
+      const displayHeight = Math.max(barHeight, 4);
+      const y = paddingTop + chartHeight - displayHeight;
+
+      return {
+        x,
+        x_center,
+        y,
+        barWidth,
+        displayHeight,
+        label: t.label,
+        value: t.sales,
+      };
+    });
+  }, [monthlyTrend]);
+
+  const totalSalesInTrend = React.useMemo(() => {
+    return monthlyTrend.reduce((acc, curr) => acc + curr.sales, 0);
+  }, [monthlyTrend]);
+
+  const averageSalesInTrend = React.useMemo(() => {
+    return totalSalesInTrend / (monthlyTrend.length || 1);
+  }, [totalSalesInTrend, monthlyTrend]);
+
+  const peakMonthObj = React.useMemo(() => {
+    if (!monthlyTrend || monthlyTrend.length === 0) return null;
+    return monthlyTrend.reduce((max, curr) => curr.sales > (max?.sales || 0) ? curr : max, monthlyTrend[0]);
+  }, [monthlyTrend]);
+
   /* ── Current date/time ── */
   const [now, setNow] = useState(new Date());
   useEffect(() => {
@@ -127,7 +229,7 @@ const Dashboard = () => {
   }, []);
 
   const dateStr = now.toLocaleDateString('en-PK', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  const timeStr = now.toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' });
+  const timeStr = now.toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' }).toUpperCase();
 
   /* ── KPI Cards Data ── */
   const kpiCards = [
@@ -202,6 +304,14 @@ const Dashboard = () => {
     if (s === 'PAID') return { bg: 'rgba(16,185,129,0.12)', color: '#059669', darkColor: '#34d399' };
     if (s === 'PARTIAL') return { bg: 'rgba(217,119,6,0.12)', color: '#d97706', darkColor: '#fbbf24' };
     return { bg: 'rgba(239,68,68,0.12)', color: '#dc2626', darkColor: '#f87171' };
+  };
+
+  const getSaleItemsSummary = (sale) => {
+    if (!sale.items || sale.items.length === 0) return null;
+    const names = sale.items.map(item => item.medicine?.name || item.name).filter(Boolean);
+    if (names.length === 0) return null;
+    if (names.length <= 2) return names.join(', ');
+    return `${names.slice(0, 2).join(', ')} (+${names.length - 2} more)`;
   };
 
   /* ═════════════════════════════ SKELETON ═════════════════════════════ */
@@ -531,53 +641,46 @@ const Dashboard = () => {
 
         /* ── Chart ── */
         .dash-chart-container {
-          display: flex;
-          align-items: flex-end;
-          gap: 12px;
-          height: 180px;
+          position: relative;
+          width: 100%;
+          height: 240px;
           padding-top: 8px;
         }
-        .dash-chart-bar-wrap {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          height: 100%;
-          justify-content: flex-end;
-          gap: 8px;
-        }
-        .dash-chart-bar {
+        .dash-chart-svg {
           width: 100%;
-          max-width: 52px;
-          border-radius: 6px 6px 3px 3px;
-          background: linear-gradient(180deg, #059669, #10b981);
-          animation: dashBarGrow 1s ease forwards;
-          position: relative;
-          cursor: default;
-          transition: filter 0.2s ease;
-          min-height: 4px;
+          height: 100%;
+          overflow: visible;
         }
-        .dash-chart-bar:hover { filter: brightness(1.15); }
-        .dash-chart-bar .dash-chart-tooltip {
+        .dash-chart-line {
+          stroke-dasharray: 1000;
+          stroke-dashoffset: 1000;
+          animation: dashLineDraw 2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+        @keyframes dashLineDraw {
+          to { stroke-dashoffset: 0; }
+        }
+        .dash-chart-dot {
+          transition: r 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), stroke-width 0.2s ease, fill 0.2s ease;
+          cursor: pointer;
+        }
+        .dash-chart-dot:hover {
+          r: 7;
+          stroke-width: 3.5;
+        }
+        .dash-chart-tooltip-v2 {
           position: absolute;
-          top: -30px;
-          left: 50%;
-          transform: translateX(-50%);
-          padding: 4px 10px;
-          border-radius: 6px;
+          z-index: 20;
+          padding: 8px 12px;
+          border-radius: 8px;
           background: var(--color-surface-primary);
           border: 1px solid var(--color-border-primary);
-          font-size: 0.65rem;
-          font-weight: 600;
-          color: var(--color-text-primary);
-          white-space: nowrap;
-          opacity: 0;
+          box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+          font-size: 0.7rem;
           pointer-events: none;
-          transition: opacity 0.2s ease;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-          z-index: 10;
+          transform: translate(-50%, -100%);
+          margin-top: -10px;
+          transition: left 0.15s cubic-bezier(0.25, 1, 0.5, 1), top 0.15s cubic-bezier(0.25, 1, 0.5, 1);
         }
-        .dash-chart-bar:hover .dash-chart-tooltip { opacity: 1; }
         .dash-chart-label {
           font-size: 0.62rem;
           font-weight: 600;
@@ -676,6 +779,12 @@ const Dashboard = () => {
           font-size: 0.65rem;
           color: var(--color-text-tertiary);
           margin-top: 2px;
+        }
+        .dash-sale-cust {
+          font-size: 0.72rem;
+          font-weight: 500;
+          color: var(--color-text-brand);
+          margin-top: 1px;
         }
         .dash-sale-amount {
           font-size: 0.85rem;
@@ -843,15 +952,38 @@ const Dashboard = () => {
 
         {/* ═══════ 3 & 4. FINANCIAL OVERVIEW + CHART ═══════ */}
         <div className="dash-main-grid">
-          {/* Financial Overview */}
-          <div className="dash-section" style={{ animationDelay: '0.55s' }}>
-            <div className="dash-section-title">
-              <span className="dash-title-icon">📊</span>
-              Financial Overview
+          <div className="dash-section" style={{ animationDelay: '0.55s', position: 'relative' }}>
+            <div className="dash-section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className="dash-title-icon">📊</span>
+                Financial Overview
+              </div>
+              <div style={{ display: 'flex', gap: '4px', background: 'var(--color-surface-tertiary)', padding: '2px', borderRadius: '6px', border: '1px solid var(--color-border-primary)' }}>
+                {['today', '7days', '30days', 'all'].map((filter) => (
+                  <button
+                    key={filter}
+                    onClick={() => handleFilterChange(filter)}
+                    style={{
+                      padding: '4px 8px',
+                      fontSize: '0.65rem',
+                      fontWeight: 600,
+                      borderRadius: '4px',
+                      border: 'none',
+                      background: activeFilter === filter ? 'var(--color-surface-primary)' : 'transparent',
+                      color: activeFilter === filter ? 'var(--color-text-brand)' : 'var(--color-text-tertiary)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      boxShadow: activeFilter === filter ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
+                    }}
+                  >
+                    {filter === 'today' ? 'Today' : filter === '7days' ? '7 Days' : filter === '30days' ? '30 Days' : 'All'}
+                  </button>
+                ))}
+              </div>
             </div>
-            {loading ? (
+            {loading || finLoading ? (
               <div className="dash-fin-grid">
-                {[1,2,3,4].map(k => <Skeleton key={k} h="80px" r="8px" />)}
+                {[1, 2, 3, 4].map(k => <Skeleton key={k} h="80px" r="8px" />)}
               </div>
             ) : (
               <div className="dash-fin-grid">
@@ -928,29 +1060,193 @@ const Dashboard = () => {
             {loading ? (
               <Skeleton h="180px" r="8px" />
             ) : monthlyTrend.length > 0 ? (
-              <div className="dash-chart-container">
-                {monthlyTrend.map((m, i) => {
-                  const pct = maxMonthly > 0 ? (m.sales / maxMonthly) * 100 : 0;
-                  return (
-                    <div key={m.label} className="dash-chart-bar-wrap">
-                      <div
-                        className="dash-chart-bar"
-                        style={{
-                          height: `${Math.max(pct, 3)}%`,
-                          animationDelay: `${0.2 + i * 0.12}s`,
-                          background: i === monthlyTrend.length - 1
-                            ? 'linear-gradient(180deg, #2563eb, #60a5fa)'
-                            : 'linear-gradient(180deg, #059669, #10b981)',
-                        }}
-                      >
-                        <div className="dash-chart-tooltip">{formatCurrency(m.sales)}</div>
+              <>
+                <div className="dash-chart-container">
+                  <svg className="dash-chart-svg" viewBox="0 0 500 240">
+                    <defs>
+                      <linearGradient id="dash-bar-grad-normal" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#059669" />
+                        <stop offset="100%" stopColor="#10b981" />
+                      </linearGradient>
+                      <linearGradient id="dash-bar-grad-current" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#2563eb" />
+                        <stop offset="100%" stopColor="#60a5fa" />
+                      </linearGradient>
+                    </defs>
+
+                    {/* Grid lines */}
+                    {[15, 110, 205].map((y) => (
+                      <line
+                        key={y}
+                        x1="50"
+                        y1={y}
+                        x2="480"
+                        y2={y}
+                        stroke="var(--color-border-primary)"
+                        strokeWidth="0.5"
+                        strokeDasharray="4,4"
+                        opacity="0.5"
+                      />
+                    ))}
+
+                    {/* Bars */}
+                    {chartPoints.map((p, idx) => {
+                      const r = Math.min(6, p.displayHeight);
+                      const pathD = `
+                        M ${p.x} 205
+                        L ${p.x} ${p.y + r}
+                        A ${r} ${r} 0 0 1 ${p.x + r} ${p.y}
+                        L ${p.x + p.barWidth - r} ${p.y}
+                        A ${r} ${r} 0 0 1 ${p.x + p.barWidth} ${p.y + r}
+                        L ${p.x + p.barWidth} 205
+                        Z
+                      `;
+
+                      const isCurrentMonth = idx === chartPoints.length - 1;
+                      const fillGrad = isCurrentMonth ? 'url(#dash-bar-grad-current)' : 'url(#dash-bar-grad-normal)';
+
+                      return (
+                        <g key={idx}>
+                          {/* Hover helper background line (makes it easier to trigger hover) */}
+                          <rect
+                            x={p.x_center - 25}
+                            y="15"
+                            width="50"
+                            height="190"
+                            fill="transparent"
+                            style={{ cursor: 'pointer' }}
+                            onMouseEnter={() => setHoveredPoint(idx)}
+                            onMouseLeave={() => setHoveredPoint(null)}
+                          />
+                          {/* SVG Bar */}
+                          <path
+                            d={pathD}
+                            fill={fillGrad}
+                            style={{
+                              transition: 'filter 0.25s ease, opacity 0.25s ease',
+                              filter: hoveredPoint === idx ? 'brightness(1.15) drop-shadow(0 4px 12px rgba(37,99,235,0.15))' : 'none',
+                              opacity: hoveredPoint !== null && hoveredPoint !== idx ? 0.75 : 1,
+                              pointerEvents: 'none'
+                            }}
+                          />
+                          {/* Month text label */}
+                          <text
+                            x={p.x_center}
+                            y="225"
+                            textAnchor="middle"
+                            style={{
+                              fontSize: '9px',
+                              fill: 'var(--color-text-tertiary)',
+                              fontFamily: "'Outfit', sans-serif",
+                              fontWeight: 600,
+                            }}
+                          >
+                            {p.label.split(' ')[0]}
+                          </text>
+                        </g>
+                      );
+                    })}
+
+                    {/* Y axis labels */}
+                    {(() => {
+                      const maxVal = Math.max(...monthlyTrend.map((t) => t.sales), 10);
+                      return (
+                        <>
+                          <text
+                            x="42"
+                            y="19"
+                            textAnchor="end"
+                            style={{
+                              fontSize: '8px',
+                              fill: 'var(--color-text-tertiary)',
+                              fontFamily: "'Outfit', sans-serif",
+                              fontWeight: 600,
+                            }}
+                          >
+                            {formatYAxisVal(maxVal)}
+                          </text>
+                          <text
+                            x="42"
+                            y="114"
+                            textAnchor="end"
+                            style={{
+                              fontSize: '8px',
+                              fill: 'var(--color-text-tertiary)',
+                              fontFamily: "'Outfit', sans-serif",
+                              fontWeight: 600,
+                            }}
+                          >
+                            {formatYAxisVal(maxVal / 2)}
+                          </text>
+                          <text
+                            x="42"
+                            y="209"
+                            textAnchor="end"
+                            style={{
+                              fontSize: '8px',
+                              fill: 'var(--color-text-tertiary)',
+                              fontFamily: "'Outfit', sans-serif",
+                              fontWeight: 600,
+                            }}
+                          >
+                            PKR 0
+                          </text>
+                        </>
+                      );
+                    })()}
+                  </svg>
+
+                  {/* Floating Tooltip */}
+                  {hoveredPoint !== null && chartPoints[hoveredPoint] && (
+                    <div
+                      className="dash-chart-tooltip-v2"
+                      style={{
+                        left: `${(chartPoints[hoveredPoint].x_center / 500) * 100}%`,
+                        top: `${(chartPoints[hoveredPoint].y / 240) * 100}%`,
+                      }}
+                    >
+                      <div style={{ fontWeight: 600, color: 'var(--color-text-tertiary)', fontSize: '0.62rem', marginBottom: '2px' }}>
+                        {chartPoints[hoveredPoint].label}
                       </div>
-                      <div className="dash-chart-label">{m.label.split(' ')[0]}</div>
+                      <div style={{ fontWeight: 700, color: '#2563eb', fontFamily: "'Outfit', sans-serif" }}>
+                        {formatCurrency(chartPoints[hoveredPoint].value)}
+                      </div>
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
+                  )}
+                </div>
+
+                {/* Summary statistics row below the chart to fill space elegantly */}
+                <div style={{
+                  marginTop: '24px',
+                  paddingTop: '20px',
+                  borderTop: '1px dashed var(--color-border-primary)',
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: '12px'
+                }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--color-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Peak Sales</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: "'Outfit', sans-serif" }}>
+                      {peakMonthObj ? formatCurrency(peakMonthObj.sales).replace('PKR ', '') : '0.00'}
+                    </div>
+                    <div style={{ fontSize: '0.6rem', color: 'var(--color-text-tertiary)' }}>{peakMonthObj ? peakMonthObj.label.split(' ')[0] : 'N/A'}</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--color-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Average</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#2563eb', fontFamily: "'Outfit', sans-serif" }}>
+                      {formatCurrency(averageSalesInTrend).replace('PKR ', '')}
+                    </div>
+                    <div style={{ fontSize: '0.6rem', color: 'var(--color-text-tertiary)' }}>Per Month</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--color-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Total Period</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#059669', fontFamily: "'Outfit', sans-serif" }}>
+                      {formatCurrency(totalSalesInTrend).replace('PKR ', '')}
+                    </div>
+                    <div style={{ fontSize: '0.6rem', color: 'var(--color-text-tertiary)' }}>6-Month Sum</div>
+                  </div>
+                </div>
+              </>) : (
               <div className="dash-empty-state">No sales data available yet</div>
             )}
           </div>
@@ -966,7 +1262,7 @@ const Dashboard = () => {
             </div>
             {loading ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {[1,2,3].map(k => <Skeleton key={k} h="36px" r="6px" />)}
+                {[1, 2, 3].map(k => <Skeleton key={k} h="36px" r="6px" />)}
               </div>
             ) : topMedicines.length > 0 ? (
               <table className="dash-table">
@@ -1010,7 +1306,7 @@ const Dashboard = () => {
             </div>
             {loading ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {[1,2,3].map(k => <Skeleton key={k} h="56px" r="8px" />)}
+                {[1, 2, 3].map(k => <Skeleton key={k} h="56px" r="8px" />)}
               </div>
             ) : expiringBatches.length > 0 ? (
               expiringBatches.map((b, i) => {
@@ -1052,7 +1348,7 @@ const Dashboard = () => {
             </div>
             {loading ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {[1,2,3].map(k => <Skeleton key={k} h="56px" r="8px" />)}
+                {[1, 2, 3].map(k => <Skeleton key={k} h="56px" r="8px" />)}
               </div>
             ) : recentSales.length > 0 ? (
               recentSales.map((sale, i) => {
@@ -1061,6 +1357,12 @@ const Dashboard = () => {
                   <div key={sale.id || i} className="dash-sale-item" style={{ animationDelay: `${0.1 + i * 0.1}s` }}>
                     <div>
                       <div className="dash-sale-inv">{sale.invoice_no}</div>
+                      <div className="dash-sale-cust">{sale.customer?.name || 'Walk-in Customer'}</div>
+                      {getSaleItemsSummary(sale) && (
+                        <div style={{ fontSize: '0.68rem', color: 'var(--color-text-tertiary)', marginTop: '2px', fontWeight: '500' }}>
+                          📦 {getSaleItemsSummary(sale)}
+                        </div>
+                      )}
                       <div className="dash-sale-date">{sale.sale_date || 'N/A'}</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>

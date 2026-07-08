@@ -194,8 +194,8 @@ const Ledgers = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Double-Entry Ledgers"
-        subtitle="Verify accounts payable summaries for wholesale suppliers and receivables for retail customers."
+        title="Accounts & Balances"
+        subtitle="Monitor outstanding balances, supplier payables, and customer receivables."
       />
 
       <div className="flex border-b border-slate-200 dark:border-zinc-850">
@@ -229,7 +229,7 @@ const Ledgers = () => {
 
       {loading ? (
         <div className="flex items-center justify-center p-12 text-slate-500 dark:text-slate-400 text-sm">
-          Loading ledger accounts...
+          Loading accounts...
         </div>
       ) : activeTab === 'suppliers' ? (
         <DataTable

@@ -375,7 +375,7 @@ const Pos = () => {
                       <div key={item.id} className="flex justify-between items-start gap-4 border-b border-slate-50 dark:border-zinc-900 pb-2">
                         <div className="flex-1">
                           <span className="font-semibold text-xs text-slate-800 dark:text-slate-200 block truncate max-w-xs">{item.name}</span>
-                          <span className="text-[10px] text-slate-500 block truncate max-w-xs">{item.generic_name}</span>
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400 block truncate max-w-xs">{item.generic_name}</span>
                           <span className="text-[10px] font-mono bg-slate-150 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-slate-600 dark:text-slate-450 mt-1 inline-block">
                             {item.quantity} {item.unit_name} x PKR {item.unit_price.toFixed(2)}
                           </span>
@@ -436,11 +436,11 @@ const Pos = () => {
                 </div>
 
                 <div className="rounded-xl bg-slate-50 dark:bg-zinc-900/40 p-4 border border-slate-200/50 dark:border-zinc-850 space-y-2.5">
-                  <div className="flex justify-between text-xs text-slate-500">
+                  <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
                     <span>Sub Total:</span>
                     <span className="font-mono font-semibold">PKR {cartSubtotal.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between text-xs text-slate-500">
+                  <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
                     <span>Tax ({taxRate}%):</span>
                     <span className="font-mono font-semibold">PKR {taxAmount.toFixed(2)}</span>
                   </div>

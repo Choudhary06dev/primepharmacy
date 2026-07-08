@@ -66,7 +66,9 @@ export const getReportsSummary = async (filters = {}) => {
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const label = d.toLocaleString('en-US', { month: 'short', year: 'numeric' });
-      const currentMonthPrefix = d.toISOString().slice(0, 7); // "YYYY-MM"
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const currentMonthPrefix = `${year}-${month}`; // "YYYY-MM"
 
       const salesVal = tenantSales
         .filter((s) => {
@@ -97,9 +99,9 @@ export const getReportsSummary = async (filters = {}) => {
       (sale.items || []).forEach((item) => {
         const medId = item.medicine_id;
         if (!medicineSalesMap[medId]) {
-          const med = tenantMedicines.find((m) => m.id === medId);
+          const med = tenantMedicines.find((m) => m.id === medId) || item.medicine;
           medicineSalesMap[medId] = {
-            name: med?.name || 'Unknown Medicine',
+            name: med?.name || item.name || 'Unknown Medicine',
             generic_name: med?.generic_name || 'N/A',
             quantity_sold: 0,
             revenue: 0

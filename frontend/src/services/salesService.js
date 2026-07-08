@@ -354,7 +354,8 @@ export const getDashboardStats = async () => {
 
     // 2. Purchase calculation
     const totalPurchasesCount = tenantPurchases.length;
-    const currentMonthStr = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+    const now = new Date();
+    const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const thisMonthPurchasesCount = tenantPurchases.filter((p) => {
       const dateStr = p.purchase_date || p.created_at || '';
       return dateStr.startsWith(currentMonthStr);

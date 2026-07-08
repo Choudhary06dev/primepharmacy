@@ -80,9 +80,9 @@ const Sales = () => {
       key: 'grand_total',
       label: 'Billing Total',
       render: (_, row) => (
-        <div className="flex flex-col font-mono text-xs text-slate-700 dark:text-slate-350">
+        <div className="flex flex-col font-mono text-xs text-slate-700 dark:text-slate-300">
           <span className="font-bold">Total: PKR {Number(row.grand_total).toFixed(2)}</span>
-          <span className="text-[10px] text-slate-500">Paid: PKR {Number(row.paid_amount).toFixed(2)}</span>
+          <span className="text-[10px] text-slate-500 dark:text-slate-400">Paid: PKR {Number(row.paid_amount).toFixed(2)}</span>
         </div>
       )
     },
@@ -174,23 +174,23 @@ const Sales = () => {
                   <p className="font-semibold text-slate-800 dark:text-slate-200">
                     {invoiceDetails.customer?.name || 'Walk-in Customer'}
                   </p>
-                  {invoiceDetails.customer?.phone && <p className="text-slate-500">Phone: {invoiceDetails.customer.phone}</p>}
-                  {invoiceDetails.customer?.email && <p className="text-slate-500">Email: {invoiceDetails.customer.email}</p>}
+                  {invoiceDetails.customer?.phone && <p className="text-slate-500 dark:text-slate-400">Phone: {invoiceDetails.customer.phone}</p>}
+                  {invoiceDetails.customer?.email && <p className="text-slate-500 dark:text-slate-400">Email: {invoiceDetails.customer.email}</p>}
                 </div>
                 <div className="space-y-1 text-right">
                   <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">Invoice details</span>
                   <p className="font-bold text-slate-800 dark:text-slate-200">Date: {invoiceDetails.sale_date}</p>
-                  <p className="text-slate-500">Payment: {invoiceDetails.payment_method}</p>
-                  <p className="text-slate-500">Cashier: {invoiceDetails.user?.name || 'Operator'}</p>
+                  <p className="text-slate-500 dark:text-slate-400">Payment: {invoiceDetails.payment_method}</p>
+                  <p className="text-slate-500 dark:text-slate-400">Cashier: {invoiceDetails.user?.name || 'Operator'}</p>
                 </div>
               </div>
 
               {/* Items List */}
               <div className="space-y-3">
-                <h4 className="text-xs font-bold text-slate-800 dark:text-slate-150 uppercase tracking-wider">Itemized Billing details</h4>
+                <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">Itemized Billing details</h4>
                 
                 <div className="border border-slate-200 dark:border-zinc-800/80 rounded-xl overflow-hidden text-xs">
-                  <div className="grid grid-cols-12 bg-slate-50 dark:bg-zinc-900/60 font-bold p-3 border-b border-slate-200 dark:border-zinc-800 text-slate-650 dark:text-slate-350">
+                  <div className="grid grid-cols-12 bg-slate-50 dark:bg-zinc-900/60 font-bold p-3 border-b border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400">
                     <span className="col-span-5">Medicine Item</span>
                     <span className="col-span-2 text-center">Unit</span>
                     <span className="col-span-2 text-center">Qty</span>
@@ -233,11 +233,11 @@ const Sales = () => {
               {/* Invoice summary info */}
               <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-zinc-850">
                 <div className="w-64 space-y-2 text-xs text-right">
-                  <div className="flex justify-between text-slate-500">
+                  <div className="flex justify-between text-slate-500 dark:text-slate-400">
                     <span>Subtotal:</span>
                     <span className="font-mono">PKR {Number(invoiceDetails.sub_total).toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between text-slate-500">
+                  <div className="flex justify-between text-slate-500 dark:text-slate-400">
                     <span>Tax:</span>
                     <span className="font-mono">PKR {Number(invoiceDetails.tax).toFixed(2)}</span>
                   </div>
@@ -253,11 +253,11 @@ const Sales = () => {
                       PKR {Number(invoiceDetails.grand_total).toFixed(2)}
                     </span>
                   </div>
-                  <div className="flex justify-between text-slate-500 pt-1">
+                  <div className="flex justify-between text-slate-500 dark:text-slate-400 pt-1">
                     <span>Paid Amount:</span>
                     <span className="font-mono">PKR {Number(invoiceDetails.paid_amount).toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between text-slate-500">
+                  <div className="flex justify-between text-slate-500 dark:text-slate-400">
                     <span>Remaining Due:</span>
                     <span className="font-mono font-bold text-red-500">
                       PKR {Math.max(0, invoiceDetails.grand_total - invoiceDetails.paid_amount).toFixed(2)}

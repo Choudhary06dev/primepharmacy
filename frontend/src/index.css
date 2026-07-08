@@ -29,6 +29,16 @@
   --color-brand-800: #166534;
   --color-brand-900: #14532d;
   --color-brand-950: #052e16;
+
+  /* Custom intermediary slate colors used throughout the app */
+  --color-slate-150: #edf2f7;
+  --color-slate-250: #e2e8f0;
+  --color-slate-350: #cbd5e1;
+  --color-slate-450: #94a3b8;
+  --color-slate-550: #64748b;
+  --color-slate-650: #475569;
+  --color-slate-750: #334155;
+  --color-slate-850: #1e293b;
 }
 
 /* ── Light Theme (default) ── */

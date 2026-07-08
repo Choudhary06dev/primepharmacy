@@ -1,0 +1,14 @@
+/vendor
+/node_modules
+.env
+.env*.local
+.phpunit.result.cache
+/bootstrap/cache/*
+/storage/framework/cache/data/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/logs/*
+.git
+.gitignore
+.gitattributes
+README.md

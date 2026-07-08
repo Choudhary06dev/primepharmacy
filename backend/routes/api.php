@@ -75,7 +75,7 @@ Route::prefix('v1')->group(function () {
             Route::apiResource('orders', PurchaseController::class)->only(['index', 'show', 'store']);
         });
 
-        Route::apiResource('expenses/categories', ExpenseCategoryController::class);
+        Route::apiResource('expenses/categories', ExpenseCategoryController::class)->names('expenses.categories');
         Route::apiResource('expenses', ExpenseController::class);
 
         Route::prefix('financials')->group(function () {

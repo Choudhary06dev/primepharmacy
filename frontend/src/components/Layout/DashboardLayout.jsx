@@ -6,7 +6,7 @@ import { getAllowedSidebarPaths, getUserSoftwareRole } from '../../services/user
 import logo from '../../assets/logo.png';
 
 const DashboardLayout = ({ children }) => {
-  const { user, pharmacy, logout } = useAuth();
+  const { user, pharmacy, logout, isLoggingOut } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
@@ -102,8 +102,8 @@ const DashboardLayout = ({ children }) => {
     }, []);
   }, [user]);
 
-  const handleLogout = async () => {
-    await logout();
+  const handleLogout = () => {
+    logout();
     navigate('/login');
   };
 
@@ -309,20 +309,41 @@ const DashboardLayout = ({ children }) => {
             {/* Logout */}
             <button
               onClick={handleLogout}
-              className="rounded-xl px-4 py-2 text-xs font-semibold transition-all cursor-pointer"
-              style={{ backgroundColor: 'var(--color-surface-secondary)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border-primary)', cursor: 'pointer' }}
+              disabled={isLoggingOut}
+              className="rounded-xl px-4 py-2 text-xs font-semibold transition-all cursor-pointer disabled:cursor-not-allowed"
+              style={{
+                backgroundColor: isLoggingOut 
+                  ? 'rgba(239, 68, 68, 0.15)' 
+                  : 'var(--color-surface-secondary)',
+                color: isLoggingOut
+                  ? '#ef4444' 
+                  : 'var(--color-text-secondary)',
+                border: isLoggingOut
+                  ? '1px solid rgba(239, 68, 68, 0.4)'
+                  : '1px solid var(--color-border-primary)',
+                cursor: isLoggingOut ? 'not-allowed' : 'pointer'
+              }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#10b981';
-                e.currentTarget.style.color = '#ffffff';
-                e.currentTarget.style.borderColor = '#10b981';
+                if (!isLoggingOut) {
+                  e.currentTarget.style.backgroundColor = '#10b981';
+                  e.currentTarget.style.color = '#ffffff';
+                  e.currentTarget.style.borderColor = '#10b981';
+                }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--color-surface-secondary)';
-                e.currentTarget.style.color = 'var(--color-text-secondary)';
-                e.currentTarget.style.borderColor = 'var(--color-border-primary)';
+                if (!isLoggingOut) {
+                  e.currentTarget.style.backgroundColor = 'var(--color-surface-secondary)';
+                  e.currentTarget.style.color = 'var(--color-text-secondary)';
+                  e.currentTarget.style.borderColor = 'var(--color-border-primary)';
+                }
               }}
             >
-              Logout
+              {isLoggingOut ? (
+                <span className="flex items-center gap-1.5">
+                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-red-500 border-t-transparent"></span>
+                  Logging out...
+                </span>
+              ) : 'Logout'}
             </button>
           </div>
         </header>

@@ -9,10 +9,17 @@ export const AuthProvider = ({ children }) => {
   const [pharmacy, setPharmacy] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('primepharm_token') || null);
   const [loading, setLoading] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     const fetchMe = async () => {
       if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      // If user profile is already populated in state, do not fetch again (e.g. on fresh login)
+      if (user) {
         setLoading(false);
         return;
       }
@@ -38,7 +45,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('primepharm_pharmacy_id', res.data.user.pharmacy_id || '');
       } catch (err) {
         console.error('Failed to fetch user profile:', err);
-        logout();
+        logout(true);
       } finally {
         setLoading(false);
       }
@@ -122,27 +129,43 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = async () => {
-    if (token) {
-      try {
-        await api.post('/auth/logout');
-      } catch (err) {
-        console.warn("Logout request failed on server:", err);
-      }
+  const logout = (fast = false) => {
+    if (fast) {
+      setToken(null);
+      setUser(null);
+      setPharmacy(null);
+      localStorage.removeItem('primepharm_token');
+      localStorage.removeItem('primepharm_pharmacy_id');
+      localStorage.removeItem('primepharm_user');
+      localStorage.removeItem('primepharm_auth_mode');
+      return;
     }
-    
-    setToken(null);
-    setUser(null);
-    setPharmacy(null);
 
-    localStorage.removeItem('primepharm_token');
-    localStorage.removeItem('primepharm_pharmacy_id');
-    localStorage.removeItem('primepharm_user');
-    localStorage.removeItem('primepharm_auth_mode');
+    setIsLoggingOut(true);
+
+    if (token) {
+      api.post('/auth/logout').catch((err) => {
+        console.warn("Logout request failed on server:", err);
+      });
+    }
+
+    // Smooth UX: Show a beautiful logout spinner before clearing state and routing
+    setTimeout(() => {
+      setToken(null);
+      setUser(null);
+      setPharmacy(null);
+
+      localStorage.removeItem('primepharm_token');
+      localStorage.removeItem('primepharm_pharmacy_id');
+      localStorage.removeItem('primepharm_user');
+      localStorage.removeItem('primepharm_auth_mode');
+      
+      setIsLoggingOut(false);
+    }, 800);
   };
 
   return (
-    <AuthContext.Provider value={{ user, pharmacy, token, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, pharmacy, token, loading, login, register, logout, isLoggingOut }}>
       {children}
     </AuthContext.Provider>
   );

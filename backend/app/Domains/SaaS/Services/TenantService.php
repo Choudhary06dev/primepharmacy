@@ -41,20 +41,19 @@ class TenantService
                 'phone' => $data['pharmacy_phone'] ?? null,
             ]);
 
+            // Temporarily set the Spatie Team context to assign the role correctly
+            if (config('permission.teams')) {
+                setPermissionsTeamId((int) $pharmacy->id);
+            }
+
             // 3. Create Default Tenant Roles in Spatie Permissions
-            $roleNames = ['Owner', 'Pharmacist', 'Cashier', 'Manager', 'Stockist'];
+            $roleNames = ['Manager', 'Pharmacy Operator'];
             foreach ($roleNames as $roleName) {
-                // Spatie team_foreign_key is 'pharmacy_id'
-                Role::create([
+                Role::query()->firstOrCreate([
                     'name' => $roleName,
                     'guard_name' => 'web',
                     'pharmacy_id' => $pharmacy->id,
                 ]);
-            }
-
-            // Temporarily set the Spatie Team context to assign the role correctly
-            if (config('permission.teams')) {
-                setPermissionsTeamId((int) $pharmacy->id);
             }
 
             // Pre-seed master Pakistani medicines database for the tenant
@@ -74,8 +73,8 @@ class TenantService
                     'status' => 'active',
                 ]);
 
-                // 5. Assign Owner Role to the User
-                $user->assignRole('Owner');
+                // 5. Assign Manager Role to the User
+                $user->assignRole('Manager');
             }
 
             return [

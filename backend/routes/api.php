@@ -3,6 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\PharmacyController;
+use App\Http\Controllers\Api\V1\UserController;
+use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CompanyController;
 use App\Http\Controllers\Api\V1\UnitController;
@@ -44,6 +46,11 @@ Route::prefix('v1')->group(function () {
         Route::post('/pharmacies', [PharmacyController::class, 'store']);
         Route::put('/pharmacies/{pharmacy}', [PharmacyController::class, 'update']);
         Route::delete('/pharmacies/{pharmacy}', [PharmacyController::class, 'destroy']);
+
+        // Users & Roles APIs
+        Route::apiResource('/users', UserController::class);
+        Route::apiResource('/roles', RoleController::class);
+        Route::post('/roles/{roleName}/permissions', [RoleController::class, 'updatePermissions']);
     });
 
     // Authenticated Tenant-Scoped & Subscription-Gated Routes

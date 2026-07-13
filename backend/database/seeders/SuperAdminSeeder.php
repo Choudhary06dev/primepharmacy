@@ -19,19 +19,22 @@ class SuperAdminSeeder extends Seeder
             setPermissionsTeamId(null);
         }
 
-        // Create the global Super Admin role
-        $role = Role::firstOrCreate([
-            'name' => 'Super Admin',
-            'guard_name' => 'web',
-            'pharmacy_id' => null, // Global
-        ]);
+        // Create the global system roles
+        $roles = ['Super Admin', 'Manager', 'Pharmacy Operator'];
+        foreach ($roles as $roleName) {
+            Role::query()->firstOrCreate([
+                'name' => $roleName,
+                'guard_name' => 'web',
+                'pharmacy_id' => null, // Global
+            ]);
+        }
 
         // Create the global Super Admin user
         $user = User::firstOrCreate(
-            ['email' => 'admin@primepharm.com'],
+            ['email' => 'superadmin@gmail.com'],
             [
                 'name' => 'Super Admin',
-                'password' => Hash::make('password'),
+                'password' => Hash::make('amjad123'),
                 'pharmacy_id' => null,
                 'branch_id' => null,
                 'status' => 'active',

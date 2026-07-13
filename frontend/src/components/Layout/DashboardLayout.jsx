@@ -16,7 +16,7 @@ const DashboardLayout = ({ children }) => {
   // Filter sidebar items based on user's software role permissions
   const navigation = useMemo(() => {
     const softwareRole = getUserSoftwareRole(user);
-    const allowedPaths = getAllowedSidebarPaths(softwareRole);
+    const allowedPaths = getAllowedSidebarPaths(user);
 
     const allNavigation = [
       { name: 'Dashboard', path: '/', icon: '📊' },

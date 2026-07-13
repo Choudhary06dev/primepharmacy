@@ -8,9 +8,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: primepharmacy
-      POSTGRES_USER: laravel
-      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: primepharm
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Amjad@186699
     volumes:
       - db_data:/var/lib/postgresql/data
     networks:
@@ -33,11 +33,13 @@ services:
       - DB_CONNECTION=pgsql
       - DB_HOST=db
       - DB_PORT=5432
-      - DB_DATABASE=primepharmacy
-      - DB_USERNAME=laravel
-      - DB_PASSWORD=secret
+      - DB_DATABASE=primepharm
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=Amjad@186699
     depends_on:
       - db
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - app-network
 

@@ -115,7 +115,15 @@ const Users = () => {
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      const nextData = { ...prev, [name]: value };
+      if (name === 'pharmacy_id') {
+        const nextPharm = value === 'global' || value === '' || value === undefined ? null : Number(value);
+        const matchedRoles = roles.filter((r) => r.pharmacy_id === nextPharm);
+        nextData.role = matchedRoles.length > 0 ? matchedRoles[0].name : '';
+      }
+      return nextData;
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -359,6 +367,9 @@ const Users = () => {
 
   const permissionCategories = [...new Set(permissionsList.map((p) => p.category))];
 
+  const selectedPharm = formData.pharmacy_id === 'global' || formData.pharmacy_id === '' || formData.pharmacy_id === undefined ? null : Number(formData.pharmacy_id);
+  const filteredRoles = roles.filter((r) => r.pharmacy_id === selectedPharm);
+
   // ─── RENDER ─────────────────────────────────────────────────
   return (
     <div className="space-y-6">
@@ -421,7 +432,7 @@ const Users = () => {
       ) : activeTab === 'users' ? (
         <DataTable columns={userColumns} data={users} searchPlaceholder="Search users..." />
       ) : (
-        <DataTable columns={roleColumns} data={roles} searchPlaceholder="Search roles..." />
+        <DataTable columns={roleColumns} data={roles.filter((r) => r.pharmacy_id === user?.pharmacy_id)} searchPlaceholder="Search roles..." />
       )}
 
       {/* ─── User Create/Edit Modal ──────────────────────────────── */}
@@ -485,11 +496,11 @@ const Users = () => {
               required
               value={formData.role}
               onChange={handleFormChange}
-              options={roles.map((r) => ({
+              options={filteredRoles.map((r) => ({
                 value: r.name,
                 label: `${r.name}${r.is_system ? '' : ' (Custom)'}`,
               }))}
-              emptyOption={roles.length === 0 ? 'No roles created yet' : false}
+              emptyOption={filteredRoles.length === 0 ? 'No roles created yet for the selected pharmacy' : false}
             />
 
             <Input

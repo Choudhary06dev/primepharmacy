@@ -182,117 +182,58 @@ const saveRoles = () => {
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const getErrorMessage = (error) => {
+  if (error.response?.data) {
+    const data = error.response.data;
+    if (data.errors) {
+      const firstKey = Object.keys(data.errors)[0];
+      const errors = data.errors[firstKey];
+      return Array.isArray(errors) ? errors[0] : errors;
+    }
+    if (data.message) {
+      return data.message;
+    }
+  }
+  return error.message || 'An unexpected error occurred.';
+};
+
 export const getUsers = async () => {
   try {
-    // API integration path
-    // const response = await api.get('/users');
-    // return response.data;
-
-    await delay(200);
-    return [...mockUsers];
+    const response = await api.get('/users');
+    return response.data;
   } catch (error) {
     console.error('Error fetching users:', error);
-    throw error;
+    throw new Error(getErrorMessage(error));
   }
 };
 
 export const createUser = async (data) => {
   try {
-    // API integration path
-    // const response = await api.post('/users', data);
-    // return response.data;
-
-    await delay(250);
-    const exists = mockUsers.some(
-      (u) => u.email.toLowerCase() === data.email.toLowerCase()
-    );
-    if (exists) {
-      throw new Error('A user with this email address already exists.');
-    }
-
-    const newUser = {
-      id: Date.now(),
-      name: data.name,
-      email: data.email,
-      phone: data.phone || '',
-      role: data.role || 'Cashier',
-      designation: data.designation || '',
-      status: data.status || 'Active',
-      password: data.password || 'Password123!',
-      created_at: new Date().toISOString().split('T')[0],
-      pharmacy_id: data.pharmacy_id !== undefined ? data.pharmacy_id : null,
-    };
-
-    mockUsers.push(newUser);
-    saveUsers();
-    return newUser;
+    const response = await api.post('/users', data);
+    return response.data;
   } catch (error) {
     console.error('Error creating user:', error);
-    throw error;
+    throw new Error(getErrorMessage(error));
   }
 };
 
 export const updateUser = async (id, data) => {
   try {
-    // API integration path
-    // const response = await api.put(`/users/${id}`, data);
-    // return response.data;
-
-    await delay(250);
-    const idx = mockUsers.findIndex((u) => u.id === Number(id));
-    if (idx === -1) throw new Error('User not found.');
-
-    const exists = mockUsers.some(
-      (u) => u.id !== Number(id) && u.email.toLowerCase() === data.email.toLowerCase()
-    );
-    if (exists) {
-      throw new Error('A user with this email address already exists.');
-    }
-
-    mockUsers[idx] = {
-      ...mockUsers[idx],
-      name: data.name,
-      email: data.email,
-      phone: data.phone || '',
-      role: data.role || 'Cashier',
-      designation: data.designation || '',
-      status: data.status || 'Active',
-      password: data.password || mockUsers[idx].password || 'Password123!',
-      pharmacy_id: data.pharmacy_id !== undefined ? data.pharmacy_id : mockUsers[idx].pharmacy_id,
-    };
-    saveUsers();
-    return mockUsers[idx];
+    const response = await api.put(`/users/${id}`, data);
+    return response.data;
   } catch (error) {
     console.error('Error updating user:', error);
-    throw error;
+    throw new Error(getErrorMessage(error));
   }
 };
 
 export const deleteUser = async (id) => {
   try {
-    // API integration path
-    // const response = await api.delete(`/users/${id}`);
-    // return response.data;
-
-    await delay(200);
-    const idx = mockUsers.findIndex((u) => u.id === Number(id));
-    if (idx === -1) throw new Error('User not found.');
-
-    // Prevent deletion of own user if it matches active logged-in user
-    const currentUserEmail = localStorage.getItem('primepharm_user')
-      ? JSON.parse(localStorage.getItem('primepharm_user')).email
-      : '';
-
-    if (mockUsers[idx].email === currentUserEmail) {
-      throw new Error('Cannot delete your own active logged-in user profile.');
-    }
-
-    mockUsers.splice(idx, 1);
-    saveUsers();
-    return { success: true };
+    const response = await api.delete(`/users/${id}`);
+    return response.data;
   } catch (error) {
     console.error('Error deleting user:', error);
-    throw error;
+    throw new Error(getErrorMessage(error));
   }
 };
 
@@ -329,15 +270,11 @@ let systemPermissions = [
 
 export const getRoles = async () => {
   try {
-    // API integration path
-    // const response = await api.get('/roles');
-    // return response.data;
-
-    await delay(200);
-    return [...mockRoles];
+    const response = await api.get('/roles');
+    return response.data;
   } catch (error) {
     console.error('Error fetching roles:', error);
-    throw error;
+    throw new Error(getErrorMessage(error));
   }
 };
 
@@ -347,119 +284,47 @@ export const getSystemPermissions = async () => {
     return [...systemPermissions];
   } catch (error) {
     console.error('Error fetching permissions:', error);
-    throw error;
+    throw new Error(getErrorMessage(error));
   }
 };
 
 export const createRole = async (data) => {
   try {
-    // API integration path
-    // const response = await api.post('/roles', data);
-    // return response.data;
-
-    await delay(250);
-    const exists = mockRoles.some(
-      (r) => r.name.toLowerCase() === data.name.toLowerCase()
-    );
-    if (exists) {
-      throw new Error('A role with this name already exists.');
-    }
-
-    const newRole = {
-      id: Date.now(),
-      name: data.name,
-      description: data.description || '',
-      is_system: false,
-      permissions: data.permissions || [],
-    };
-
-    mockRoles.push(newRole);
-    saveRoles();
-    return newRole;
+    const response = await api.post('/roles', data);
+    return response.data;
   } catch (error) {
     console.error('Error creating role:', error);
-    throw error;
+    throw new Error(getErrorMessage(error));
   }
 };
 
 export const updateRole = async (id, data) => {
   try {
-    // API integration path
-    // const response = await api.put(`/roles/${id}`, data);
-    // return response.data;
-
-    await delay(250);
-    const idx = mockRoles.findIndex((r) => r.id === Number(id));
-    if (idx === -1) throw new Error('Role not found.');
-
-    const exists = mockRoles.some(
-      (r) => r.id !== Number(id) && r.name.toLowerCase() === data.name.toLowerCase()
-    );
-    if (exists) {
-      throw new Error('A role with this name already exists.');
-    }
-
-    mockRoles[idx] = {
-      ...mockRoles[idx],
-      name: data.name,
-      description: data.description || '',
-    };
-    saveRoles();
-    return mockRoles[idx];
+    const response = await api.put(`/roles/${id}`, data);
+    return response.data;
   } catch (error) {
     console.error('Error updating role:', error);
-    throw error;
+    throw new Error(getErrorMessage(error));
   }
 };
 
 export const deleteRole = async (id) => {
   try {
-    // API integration path
-    // const response = await api.delete(`/roles/${id}`);
-    // return response.data;
-
-    await delay(200);
-    const idx = mockRoles.findIndex((r) => r.id === Number(id));
-    if (idx === -1) throw new Error('Role not found.');
-
-    if (mockRoles[idx].is_system) {
-      throw new Error('System default roles cannot be deleted.');
-    }
-
-    // Check if any user is assigned to this role
-    const usersWithRole = mockUsers.filter((u) => u.role === mockRoles[idx].name);
-    if (usersWithRole.length > 0) {
-      throw new Error(`Cannot delete this role — ${usersWithRole.length} user(s) are still assigned to it.`);
-    }
-
-    mockRoles.splice(idx, 1);
-    saveRoles();
-    return { success: true };
+    const response = await api.delete(`/roles/${id}`);
+    return response.data;
   } catch (error) {
     console.error('Error deleting role:', error);
-    throw error;
+    throw new Error(getErrorMessage(error));
   }
 };
 
 export const updateRolePermissions = async (roleName, permissions) => {
   try {
-    // API integration path
-    // const response = await api.post(`/roles/${roleName}/permissions`, { permissions });
-    // return response.data;
-
-    await delay(250);
-    const idx = mockRoles.findIndex((r) => r.name.toLowerCase() === roleName.toLowerCase());
-    if (idx === -1) throw new Error('Role not found.');
-
-    mockRoles[idx] = {
-      ...mockRoles[idx],
-      permissions: [...permissions],
-    };
-    saveRoles();
-    return mockRoles[idx];
+    const response = await api.post(`/roles/${roleName}/permissions`, { permissions });
+    return response.data;
   } catch (error) {
     console.error('Error updating role permissions:', error);
-    throw error;
+    throw new Error(getErrorMessage(error));
   }
 };
 
@@ -480,15 +345,30 @@ export const getMockUserByCredentials = (email, password) => {
   };
 };
 
-export const getAllowedSidebarPaths = (roleName) => {
-  if ((roleName || '').toLowerCase() === 'super admin') {
+export const getAllowedSidebarPaths = (user) => {
+  if (!user) return [];
+
+  // Super Admins (pharmacy_id is null) always see the full sidebar
+  if (user.pharmacy_id === null) {
     return null;
   }
 
-  const role = mockRoles.find((r) => r.name.toLowerCase() === (roleName || '').toLowerCase());
-  if (!role) return null; // no role found in software roles
+  const roleName = user.roles?.[0] || user.role || '';
+  if (roleName.toLowerCase() === 'super admin') {
+    return null;
+  }
 
-  // Map role permissions to their sidebar paths
+  // If user permissions are returned by the backend DB
+  if (user.permissions) {
+    return systemPermissions
+      .filter((p) => user.permissions.includes(p.id))
+      .map((p) => p.sidebarPath);
+  }
+
+  // Fallback to local mock roles
+  const role = mockRoles.find((r) => r.name.toLowerCase() === roleName.toLowerCase());
+  if (!role) return [];
+
   return systemPermissions
     .filter((p) => role.permissions.includes(p.id))
     .map((p) => p.sidebarPath);

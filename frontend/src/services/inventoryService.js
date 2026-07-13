@@ -302,7 +302,7 @@ const seedMockDataForTenant = (pharmacyId) => {
   });
 
   // 2. generate additional mock medicines
-  const targetCount = 15000;
+  const targetCount = 1000;
   const originalCount = formattedMeds.length;
   const additionalNeed = targetCount - originalCount;
 
@@ -914,7 +914,7 @@ export const deleteUnit = async (id) => {
 
 // ─── MEDICINES CATALOG INTEGRATIONS ────────────────────────────────────
 
-export const getMedicines = async () => {
+export const getMedicines = async (page, search = '', perPage = 25) => {
   if (isMockMode()) {
     try {
       await delay(200);
@@ -948,7 +948,16 @@ export const getMedicines = async () => {
     }
   }
 
-  const response = await api.get('/inventory/medicines');
+  const params = {};
+  if (page !== undefined) {
+    params.page = page;
+    params.search = search;
+    params.per_page = perPage;
+  } else {
+    params.paginate = 'false';
+  }
+
+  const response = await api.get('/inventory/medicines', { params });
   return response.data;
 };
 

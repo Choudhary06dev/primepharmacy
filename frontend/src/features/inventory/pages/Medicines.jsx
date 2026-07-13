@@ -16,6 +16,12 @@ const Medicines = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
+  // Pagination & Search States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalRows, setTotalRows] = useState(0);
+
   // Form states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -35,28 +41,47 @@ const Medicines = () => {
   const [formError, setFormError] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  // Fetch lists on mount
+  // Fetch static data on mount
   useEffect(() => {
-    fetchInitialData();
+    fetchStaticData();
   }, []);
 
-  const fetchInitialData = async () => {
-    setLoading(true);
-    setError(null);
+  // Fetch medicines list dynamically
+  useEffect(() => {
+    fetchMedicinesList();
+  }, [currentPage, searchQuery, pageSize]);
+
+  const fetchStaticData = async () => {
     try {
-      const [medsData, catsData, compsData, unitsData] = await Promise.all([
-        getMedicines(),
+      const [catsData, compsData, unitsData] = await Promise.all([
         getCategories(),
         getCompanies(),
         getUnits()
       ]);
-      setMedicines(medsData);
       setCategories(catsData);
       setCompanies(compsData);
       setUnits(unitsData);
     } catch (err) {
       console.error(err);
       setError('Failed to fetch catalog lists. Please refresh.');
+    }
+  };
+
+  const fetchMedicinesList = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const medsResponse = await getMedicines(currentPage, searchQuery, pageSize);
+      if (medsResponse && medsResponse.data) {
+        setMedicines(medsResponse.data);
+        setTotalRows(medsResponse.total || medsResponse.data.length);
+      } else {
+        setMedicines(medsResponse || []);
+        setTotalRows((medsResponse || []).length);
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Failed to fetch medicines. Please refresh.');
     } finally {
       setLoading(false);
     }
@@ -330,6 +355,20 @@ const Medicines = () => {
           columns={columns}
           data={medicines}
           searchPlaceholder="Search catalog by name, formula generic or sku..."
+          serverSide={true}
+          totalRows={totalRows}
+          currentPage={currentPage}
+          pageSize={pageSize}
+          searchVal={searchQuery}
+          onPageChange={(page) => setCurrentPage(page)}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setCurrentPage(1);
+          }}
+          onSearchChange={(q) => {
+            setSearchQuery(q);
+            setCurrentPage(1);
+          }}
         />
       )}
 

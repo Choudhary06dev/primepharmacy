@@ -14,30 +14,52 @@ class MedicineController extends Controller
     /**
      * Display a listing of medicines with category, company, base unit, conversions and aggregated stock.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $medicines = Medicine::with([
+        $query = Medicine::with([
             'category', 
             'company', 
             'baseUnit', 
             'conversions.fromUnit',
-            'batches' => function ($query) {
-                $query->where('status', 'ACTIVE')
-                      ->where('remaining_quantity', '>', 0)
-                      ->orderBy('expiry_date', 'asc');
+            'batches' => function ($q) {
+                $q->where('status', 'ACTIVE')
+                  ->where('remaining_quantity', '>', 0)
+                  ->orderBy('expiry_date', 'asc');
             }
         ])
-            ->withSum('batches as total_stock', 'remaining_quantity')
-            ->orderBy('name', 'asc')
-            ->get();
-            
+        ->withSum('batches as total_stock', 'remaining_quantity');
+
+        // Apply backend search filter
+        if ($request->filled('search')) {
+            $search = $request->query('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('generic_name', 'like', "%{$search}%")
+                  ->orWhere('sku', 'like', "%{$search}%")
+                  ->orWhere('barcode', 'like', "%{$search}%");
+            });
+        }
+
+        // Return unpaginated array if explicitly requested or page is not specified
+        if ($request->query('paginate') === 'false' || !$request->has('page')) {
+            $medicines = $query->orderBy('name', 'asc')->get();
+            $medicines->transform(function ($med) {
+                $med->total_stock = (int) ($med->total_stock ?? 0);
+                return $med;
+            });
+            return response()->json($medicines);
+        }
+
+        $perPage = $request->query('per_page', 25);
+        $paginator = $query->orderBy('name', 'asc')->paginate($perPage);
+
         // Map to ensure total_stock is numeric and defaults to 0 if null
-        $medicines->transform(function ($med) {
+        $paginator->getCollection()->transform(function ($med) {
             $med->total_stock = (int) ($med->total_stock ?? 0);
             return $med;
         });
 
-        return response()->json($medicines);
+        return response()->json($paginator);
     }
 
     /**

@@ -95,6 +95,7 @@ class AuthController extends Controller
             setPermissionsTeamId((int) $user->pharmacy_id);
         }
         $roles = $user->getRoleNames();
+        $permissions = $user->getAllPermissions()->pluck('name');
 
         return response()->json([
             'message' => 'Login successful.',
@@ -105,6 +106,7 @@ class AuthController extends Controller
                 'pharmacy_id' => $user->pharmacy_id,
                 'branch_id' => $user->branch_id,
                 'roles' => $roles,
+                'permissions' => $permissions,
             ],
             'pharmacy' => $user->pharmacy,
             'access_token' => $token,
@@ -136,6 +138,7 @@ class AuthController extends Controller
             setPermissionsTeamId((int) $user->pharmacy_id);
         }
         $roles = $user->getRoleNames();
+        $permissions = $user->getAllPermissions()->pluck('name');
 
         return response()->json([
             'user' => [
@@ -145,6 +148,7 @@ class AuthController extends Controller
                 'pharmacy_id' => $user->pharmacy_id,
                 'branch_id' => $user->branch_id,
                 'roles' => $roles,
+                'permissions' => $permissions,
             ],
             'pharmacy' => $user->pharmacy,
             'branch' => $user->branch,

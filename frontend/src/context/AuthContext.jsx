@@ -12,6 +12,16 @@ export const AuthProvider = ({ children }) => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
+    // If browser is currently in mock mode, clear it and force a clean reload to API mode
+    if (localStorage.getItem('primepharm_auth_mode') === 'mock') {
+      localStorage.removeItem('primepharm_token');
+      localStorage.removeItem('primepharm_user');
+      localStorage.removeItem('primepharm_pharmacy_id');
+      localStorage.removeItem('primepharm_auth_mode');
+      window.location.reload();
+      return;
+    }
+
     const fetchMe = async () => {
       if (!token) {
         setLoading(false);
@@ -20,20 +30,6 @@ export const AuthProvider = ({ children }) => {
 
       // If user profile is already populated in state, do not fetch again (e.g. on fresh login)
       if (user) {
-        setLoading(false);
-        return;
-      }
-
-      if (localStorage.getItem('primepharm_auth_mode') === 'mock') {
-        const storedUser = JSON.parse(localStorage.getItem('primepharm_user') || 'null');
-        setUser(storedUser);
-        
-        let ph = null;
-        if (storedUser && storedUser.pharmacy_id !== null && storedUser.pharmacy_id !== undefined) {
-          const mockPharms = JSON.parse(localStorage.getItem('primepharm_mock_pharmacies') || '[]');
-          ph = mockPharms.find((p) => p.id === Number(storedUser.pharmacy_id));
-        }
-        setPharmacy(ph || { id: 1, name: 'Local Demo Pharmacy', status: 'Active' });
         setLoading(false);
         return;
       }
@@ -71,36 +67,6 @@ export const AuthProvider = ({ children }) => {
 
       return res.data;
     } catch (err) {
-      const mockUser = getMockUserByCredentials(email, password);
-
-      if (mockUser) {
-        const mockToken = `mock-${mockUser.id}-${Date.now()}`;
-
-        setToken(mockToken);
-        setUser(mockUser);
-
-        let ph = null;
-        if (mockUser.pharmacy_id !== null && mockUser.pharmacy_id !== undefined) {
-          const mockPharms = JSON.parse(localStorage.getItem('primepharm_mock_pharmacies') || '[]');
-          ph = mockPharms.find((p) => p.id === Number(mockUser.pharmacy_id));
-        }
-        const activePh = ph || { id: 1, name: 'Local Demo Pharmacy', status: 'Active' };
-        setPharmacy(activePh);
-
-        localStorage.setItem('primepharm_token', mockToken);
-        localStorage.setItem('primepharm_pharmacy_id', mockUser.pharmacy_id || '');
-        localStorage.setItem('primepharm_user', JSON.stringify(mockUser));
-        localStorage.setItem('primepharm_auth_mode', 'mock');
-
-        return {
-          message: 'Login successful.',
-          user: mockUser,
-          pharmacy: activePh,
-          access_token: mockToken,
-          token_type: 'Bearer',
-        };
-      }
-
       throw err.response?.data || { message: 'An error occurred during login.' };
     } finally {
       setLoading(false);

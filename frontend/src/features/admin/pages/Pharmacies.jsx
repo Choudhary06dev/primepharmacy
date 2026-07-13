@@ -19,7 +19,7 @@ const emptyForm = {
   owner_name: '',
   owner_email: '',
   owner_phone: '',
-  role: 'Admin',
+  role: 'Manager',
   password: '',
 };
 
@@ -100,7 +100,7 @@ const Pharmacies = () => {
       owner_name: pharmacy.owner_name || '',
       owner_email: pharmacy.owner_email || '',
       owner_phone: pharmacy.owner_phone || '',
-      role: pharmacy.role || 'Admin',
+      role: pharmacy.role || 'Manager',
       password: '',
     });
     setCurrentId(pharmacy.id);
@@ -393,18 +393,20 @@ const Pharmacies = () => {
               onChange={handleChange}
               placeholder="e.g. +923000000000"
             />
+
             <Select
               label="Owner Software Role"
               name="role"
               required={!isEditMode || !!formData.owner_email}
               value={formData.role}
               onChange={handleChange}
-              options={roles.map((r) => ({
-                value: r.name,
-                label: r.name,
-              }))}
-              emptyOption={roles.length === 0 ? 'No roles created yet' : false}
+              options={[
+                { value: 'Manager', label: 'Manager' },
+                { value: 'Pharmacy Operator', label: 'Pharmacy Operator' },
+              ]}
+              emptyOption={false}
             />
+
             <Input
               label={isEditMode ? 'Reset Password' : 'Owner Password'}
               name="password"

@@ -16,6 +16,75 @@ class MedicineController extends Controller
      */
     public function index(Request $request)
     {
+        // Return highly optimized lightweight list for dropdowns/selectors
+        if ($request->query('simple') === 'true' || $request->boolean('simple')) {
+            $pharmacyId = app()->bound('tenant.id') ? app('tenant.id') : null;
+            
+            $query = DB::table('medicines')
+                ->leftJoin('units', 'medicines.base_unit_id', '=', 'units.id')
+                ->leftJoin('medicine_batches', function ($join) {
+                    $join->on('medicines.id', '=', 'medicine_batches.medicine_id')
+                         ->where('medicine_batches.status', '=', 'ACTIVE')
+                         ->where('medicine_batches.remaining_quantity', '>', 0);
+                })
+                ->select([
+                    'medicines.id',
+                    'medicines.name',
+                    'medicines.generic_name',
+                    'medicines.sku',
+                    'medicines.barcode',
+                    'medicines.is_active',
+                    'medicines.base_unit_id',
+                    'units.name as base_unit_name',
+                    'units.abbreviation as base_unit_abbreviation',
+                    DB::raw('COALESCE(SUM(medicine_batches.remaining_quantity), 0) as total_stock')
+                ])
+                ->groupBy([
+                    'medicines.id',
+                    'medicines.name',
+                    'medicines.generic_name',
+                    'medicines.sku',
+                    'medicines.barcode',
+                    'medicines.is_active',
+                    'medicines.base_unit_id',
+                    'units.name',
+                    'units.abbreviation'
+                ])
+                ->orderBy('medicines.name', 'asc');
+
+            if ($pharmacyId) {
+                $query->where('medicines.pharmacy_id', $pharmacyId);
+            }
+
+            if ($request->filled('search')) {
+                $search = strtolower($request->query('search'));
+                $query->where(function ($q) use ($search) {
+                    $q->whereRaw('LOWER(medicines.name) like ?', ["%{$search}%"])
+                      ->orWhereRaw('LOWER(medicines.generic_name) like ?', ["%{$search}%"])
+                      ->orWhereRaw('LOWER(medicines.sku) like ?', ["%{$search}%"])
+                      ->orWhereRaw('LOWER(medicines.barcode) like ?', ["%{$search}%"]);
+                });
+            }
+
+            $medicines = $query->limit(50)->get();
+            
+            $medicines->transform(function ($med) {
+                $med->base_unit = [
+                    'id' => $med->base_unit_id,
+                    'name' => $med->base_unit_name,
+                    'abbreviation' => $med->base_unit_abbreviation
+                ];
+                $med->base_unit_id = (int)$med->base_unit_id;
+                $med->id = (int)$med->id;
+                $med->is_active = (bool)$med->is_active;
+                $med->total_stock = (int)$med->total_stock;
+                unset($med->base_unit_name);
+                unset($med->base_unit_abbreviation);
+                return $med;
+            });
+            return response()->json($medicines);
+        }
+
         $query = Medicine::with([
             'category', 
             'company', 
@@ -29,14 +98,14 @@ class MedicineController extends Controller
         ])
         ->withSum('batches as total_stock', 'remaining_quantity');
 
-        // Apply backend search filter
+        // Apply backend search filter (case-insensitive)
         if ($request->filled('search')) {
-            $search = $request->query('search');
+            $search = strtolower($request->query('search'));
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('generic_name', 'like', "%{$search}%")
-                  ->orWhere('sku', 'like', "%{$search}%")
-                  ->orWhere('barcode', 'like', "%{$search}%");
+                $q->whereRaw('LOWER(name) like ?', ["%{$search}%"])
+                  ->orWhereRaw('LOWER(generic_name) like ?', ["%{$search}%"])
+                  ->orWhereRaw('LOWER(sku) like ?', ["%{$search}%"])
+                  ->orWhereRaw('LOWER(barcode) like ?', ["%{$search}%"]);
             });
         }
 

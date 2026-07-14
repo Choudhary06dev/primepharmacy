@@ -178,6 +178,8 @@ class RoleController extends Controller
         $query = Role::where('name', $roleName);
         if ($authUser->pharmacy_id !== null) {
             $query->where('pharmacy_id', $authUser->pharmacy_id);
+        } else {
+            $query->whereNull('pharmacy_id');
         }
         $role = $query->firstOrFail();
 

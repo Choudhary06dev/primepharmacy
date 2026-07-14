@@ -3,7 +3,12 @@ import api from './api';
 const STORAGE_USERS_KEY = 'primepharm_mock_users';
 const STORAGE_ROLES_KEY = 'primepharm_mock_roles';
 
+const isMockMode = () => localStorage.getItem('primepharm_auth_mode') === 'mock';
+
 const getInitialUsers = () => {
+  if (!isMockMode()) {
+    return [];
+  }
   const stored = localStorage.getItem(STORAGE_USERS_KEY);
   if (stored) {
     try {
@@ -18,6 +23,9 @@ const getInitialUsers = () => {
 };
 
 const getInitialRoles = () => {
+  if (!isMockMode()) {
+    return [];
+  }
   const stored = localStorage.getItem(STORAGE_ROLES_KEY);
   if (stored) {
     try {
@@ -197,10 +205,15 @@ const getErrorMessage = (error) => {
   return error.message || 'An unexpected error occurred.';
 };
 
+let usersCache = null;
+let rolesCache = null;
+
 export const getUsers = async () => {
   try {
+    if (usersCache) return usersCache;
     const response = await api.get('/users');
-    return response.data;
+    usersCache = response.data;
+    return usersCache;
   } catch (error) {
     console.error('Error fetching users:', error);
     throw new Error(getErrorMessage(error));
@@ -210,6 +223,7 @@ export const getUsers = async () => {
 export const createUser = async (data) => {
   try {
     const response = await api.post('/users', data);
+    usersCache = null;
     return response.data;
   } catch (error) {
     console.error('Error creating user:', error);
@@ -220,6 +234,7 @@ export const createUser = async (data) => {
 export const updateUser = async (id, data) => {
   try {
     const response = await api.put(`/users/${id}`, data);
+    usersCache = null;
     return response.data;
   } catch (error) {
     console.error('Error updating user:', error);
@@ -230,6 +245,7 @@ export const updateUser = async (id, data) => {
 export const deleteUser = async (id) => {
   try {
     const response = await api.delete(`/users/${id}`);
+    usersCache = null;
     return response.data;
   } catch (error) {
     console.error('Error deleting user:', error);
@@ -270,8 +286,10 @@ let systemPermissions = [
 
 export const getRoles = async () => {
   try {
+    if (rolesCache) return rolesCache;
     const response = await api.get('/roles');
-    return response.data;
+    rolesCache = response.data;
+    return rolesCache;
   } catch (error) {
     console.error('Error fetching roles:', error);
     throw new Error(getErrorMessage(error));
@@ -291,6 +309,7 @@ export const getSystemPermissions = async () => {
 export const createRole = async (data) => {
   try {
     const response = await api.post('/roles', data);
+    rolesCache = null;
     return response.data;
   } catch (error) {
     console.error('Error creating role:', error);
@@ -301,6 +320,7 @@ export const createRole = async (data) => {
 export const updateRole = async (id, data) => {
   try {
     const response = await api.put(`/roles/${id}`, data);
+    rolesCache = null;
     return response.data;
   } catch (error) {
     console.error('Error updating role:', error);
@@ -311,6 +331,7 @@ export const updateRole = async (id, data) => {
 export const deleteRole = async (id) => {
   try {
     const response = await api.delete(`/roles/${id}`);
+    rolesCache = null;
     return response.data;
   } catch (error) {
     console.error('Error deleting role:', error);
@@ -321,6 +342,7 @@ export const deleteRole = async (id) => {
 export const updateRolePermissions = async (roleName, permissions) => {
   try {
     const response = await api.post(`/roles/${roleName}/permissions`, { permissions });
+    rolesCache = null;
     return response.data;
   } catch (error) {
     console.error('Error updating role permissions:', error);

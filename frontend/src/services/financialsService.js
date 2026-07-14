@@ -15,7 +15,8 @@ const getActivePharmacyId = () => {
   return user ? Number(user.pharmacy_id) : null;
 };
 
-// --- EXPENSE CATEGORIES ---
+let expenseCategoriesCache = null;
+
 export const getExpenseCategories = async () => {
   if (isMockMode()) {
     await delay(150);
@@ -23,8 +24,10 @@ export const getExpenseCategories = async () => {
     const stored = JSON.parse(localStorage.getItem(CAT_STORAGE_KEY) || '[]');
     return stored.filter((c) => c.pharmacy_id === pharmacyId || c.pharmacy_id === undefined || c.pharmacy_id === null);
   }
+  if (expenseCategoriesCache) return expenseCategoriesCache;
   const response = await api.get('/expenses/categories');
-  return response.data;
+  expenseCategoriesCache = response.data;
+  return expenseCategoriesCache;
 };
 
 export const createExpenseCategory = async (data) => {
@@ -44,6 +47,7 @@ export const createExpenseCategory = async (data) => {
   }
   try {
     const response = await api.post('/expenses/categories', data);
+    expenseCategoriesCache = null;
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.message || 'Failed to create expense category.');
@@ -66,6 +70,7 @@ export const updateExpenseCategory = async (id, data) => {
   }
   try {
     const response = await api.put(`/expenses/categories/${id}`, data);
+    expenseCategoriesCache = null;
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.message || 'Failed to update expense category.');
@@ -91,6 +96,7 @@ export const deleteExpenseCategory = async (id) => {
   }
   try {
     const response = await api.delete(`/expenses/categories/${id}`);
+    expenseCategoriesCache = null;
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.message || 'Failed to delete expense category.');

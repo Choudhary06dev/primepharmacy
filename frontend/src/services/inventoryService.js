@@ -376,6 +376,9 @@ const seedMockDataForTenant = (pharmacyId) => {
 };
 
 export const getInitialMedicines = () => {
+  if (!isMockMode()) {
+    return [];
+  }
   const pharmacyId = getActivePharmacyId() || 1;
   const baseMeds = seedMockDataForTenant(pharmacyId);
   
@@ -414,11 +417,17 @@ export const getInitialMedicines = () => {
 };
 
 const getInitialBatches = () => {
+  if (!isMockMode()) {
+    return [];
+  }
   const stored = localStorage.getItem(STORAGE_BATCHES_KEY);
   return stored ? JSON.parse(stored) : [];
 };
 
 const getInitialCategories = () => {
+  if (!isMockMode()) {
+    return [];
+  }
   const stored = localStorage.getItem(STORAGE_CATEGORIES_KEY);
   if (stored) {
     try {
@@ -444,6 +453,9 @@ const getInitialCategories = () => {
 };
 
 const getInitialCompanies = () => {
+  if (!isMockMode()) {
+    return [];
+  }
   const stored = localStorage.getItem(STORAGE_COMPANIES_KEY);
   if (stored) {
     try {
@@ -469,6 +481,9 @@ const getInitialCompanies = () => {
 };
 
 const getInitialUnits = () => {
+  if (!isMockMode()) {
+    return [];
+  }
   const stored = localStorage.getItem(STORAGE_UNITS_KEY);
   if (stored) {
     try {
@@ -522,6 +537,10 @@ const saveMedicines = () => {
 };
 const saveBatches = () => { localStorage.setItem(STORAGE_BATCHES_KEY, JSON.stringify(mockBatches)); };
 
+let categoriesCache = null;
+let companiesCache = null;
+let unitsCache = null;
+
 export const getCategories = async () => {
   if (isMockMode()) {
     try {
@@ -534,8 +553,10 @@ export const getCategories = async () => {
       throw error;
     }
   }
+  if (categoriesCache) return categoriesCache;
   const response = await api.get('/inventory/categories');
-  return response.data;
+  categoriesCache = response.data;
+  return categoriesCache;
 };
 
 export const createCategory = async (data) => {
@@ -570,6 +591,7 @@ export const createCategory = async (data) => {
 
   try {
     const response = await api.post('/inventory/categories', data);
+    categoriesCache = null;
     return response.data;
   } catch (error) {
     const errorMsg = error.response?.data?.errors
@@ -612,6 +634,7 @@ export const updateCategory = async (id, data) => {
 
   try {
     const response = await api.put(`/inventory/categories/${id}`, data);
+    categoriesCache = null;
     return response.data;
   } catch (error) {
     const errorMsg = error.response?.data?.errors
@@ -646,6 +669,7 @@ export const deleteCategory = async (id) => {
 
   try {
     const response = await api.delete(`/inventory/categories/${id}`);
+    categoriesCache = null;
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.message || 'Failed to delete category.');
@@ -664,8 +688,10 @@ export const getCompanies = async () => {
       throw error;
     }
   }
+  if (companiesCache) return companiesCache;
   const response = await api.get('/inventory/companies');
-  return response.data;
+  companiesCache = response.data;
+  return companiesCache;
 };
 
 export const createCompany = async (data) => {
@@ -701,6 +727,7 @@ export const createCompany = async (data) => {
 
   try {
     const response = await api.post('/inventory/companies', data);
+    companiesCache = null;
     return response.data;
   } catch (error) {
     const errorMsg = error.response?.data?.errors
@@ -744,6 +771,7 @@ export const updateCompany = async (id, data) => {
 
   try {
     const response = await api.put(`/inventory/companies/${id}`, data);
+    companiesCache = null;
     return response.data;
   } catch (error) {
     const errorMsg = error.response?.data?.errors
@@ -778,6 +806,7 @@ export const deleteCompany = async (id) => {
 
   try {
     const response = await api.delete(`/inventory/companies/${id}`);
+    companiesCache = null;
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.message || 'Failed to delete company.');
@@ -796,8 +825,10 @@ export const getUnits = async () => {
       throw error;
     }
   }
+  if (unitsCache) return unitsCache;
   const response = await api.get('/inventory/units');
-  return response.data;
+  unitsCache = response.data;
+  return unitsCache;
 };
 
 export const createUnit = async (data) => {
@@ -832,6 +863,7 @@ export const createUnit = async (data) => {
 
   try {
     const response = await api.post('/inventory/units', data);
+    unitsCache = null;
     return response.data;
   } catch (error) {
     const errorMsg = error.response?.data?.errors
@@ -876,6 +908,7 @@ export const updateUnit = async (id, data) => {
 
   try {
     const response = await api.put(`/inventory/units/${id}`, data);
+    unitsCache = null;
     return response.data;
   } catch (error) {
     const errorMsg = error.response?.data?.errors
@@ -906,6 +939,7 @@ export const deleteUnit = async (id) => {
 
   try {
     const response = await api.delete(`/inventory/units/${id}`);
+    unitsCache = null;
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.message || 'Failed to delete unit.');
@@ -914,7 +948,7 @@ export const deleteUnit = async (id) => {
 
 // ─── MEDICINES CATALOG INTEGRATIONS ────────────────────────────────────
 
-export const getMedicines = async (page, search = '', perPage = 25) => {
+export const getMedicines = async (page, search = '', perPage = 25, simple = false) => {
   if (isMockMode()) {
     try {
       await delay(200);
@@ -955,9 +989,33 @@ export const getMedicines = async (page, search = '', perPage = 25) => {
     params.per_page = perPage;
   } else {
     params.paginate = 'false';
+    if (simple) {
+      params.simple = 'true';
+      if (search) {
+        params.search = search;
+      }
+    }
   }
 
   const response = await api.get('/inventory/medicines', { params });
+  return response.data;
+};
+
+export const getMedicine = async (id) => {
+  if (isMockMode()) {
+    try {
+      await delay(100);
+      mockMedicines = getInitialMedicines();
+      const med = mockMedicines.find((m) => m.id === Number(id));
+      if (!med) throw new Error('Medicine not found.');
+      return med;
+    } catch (error) {
+      console.error('Error fetching mock medicine:', error);
+      throw error;
+    }
+  }
+
+  const response = await api.get(`/inventory/medicines/${id}`);
   return response.data;
 };
 

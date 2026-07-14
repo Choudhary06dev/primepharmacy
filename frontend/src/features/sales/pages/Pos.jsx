@@ -5,7 +5,7 @@ import Input from '../../../components/UI/Input';
 import Select from '../../../components/UI/Select';
 import SearchableSelect from '../../../components/UI/SearchableSelect';
 import Modal from '../../../components/UI/Modal';
-import { getMedicines, getUnits } from '../../../services/inventoryService';
+import { getMedicines, getUnits, getMedicine } from '../../../services/inventoryService';
 import { getCustomers, createCustomer, checkoutPOS } from '../../../services/salesService';
 import { useAuth } from '../../../context/AuthContext';
 
@@ -13,7 +13,6 @@ const Pos = () => {
   const { pharmacy, user } = useAuth();
   
   // Lists
-  const [medicines, setMedicines] = useState([]);
   const [units, setUnits] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -52,12 +51,10 @@ const Pos = () => {
     setLoading(true);
     setError(null);
     try {
-      const [medsData, unitsData, custData] = await Promise.all([
-        getMedicines(),
+      const [unitsData, custData] = await Promise.all([
         getUnits(),
         getCustomers()
       ]);
-      setMedicines(medsData.filter(m => m.is_active));
       setUnits(unitsData);
       setCustomers(custData);
     } catch (err) {
@@ -68,18 +65,27 @@ const Pos = () => {
     }
   };
 
-  // Medicine Selection Change
+  // Medicine Selection Change (Fetch full details from server including batches/stock)
   useEffect(() => {
     if (!selectedMedId) {
       setSelectedMed(null);
       setSelectedUnitId('');
       return;
     }
-    const med = medicines.find(m => m.id === Number(selectedMedId));
-    setSelectedMed(med);
-    setSelectedUnitId(med?.base_unit_id || '');
-    setMedQty(1);
-  }, [selectedMedId, medicines]);
+    const loadSelectedMedicine = async () => {
+      try {
+        const med = await getMedicine(selectedMedId);
+        setSelectedMed(med);
+        setSelectedUnitId(med?.base_unit_id || '');
+        setMedQty(1);
+      } catch (err) {
+        console.error('Error loading medicine details:', err);
+        alert('Failed to load stock details for the selected medicine.');
+        setSelectedMedId('');
+      }
+    };
+    loadSelectedMedicine();
+  }, [selectedMedId]);
 
   // Calculate dynamic options for packaging selector
   const activeUnitOptions = useMemo(() => {
@@ -227,10 +233,6 @@ const Pos = () => {
       setDiscount(0);
       setPaidAmount('');
       setCustomerId('');
-      
-      // Refresh inventory list to sync remaining stocks
-      const refreshedMeds = await getMedicines();
-      setMedicines(refreshedMeds.filter(m => m.is_active));
     } catch (err) {
       alert(err.message || 'Failed to process POS transaction checkout.');
     } finally {
@@ -287,10 +289,14 @@ const Pos = () => {
                   label="Search Medicine / Generic barcode"
                   value={selectedMedId}
                   onChange={(e) => setSelectedMedId(e.target.value)}
-                  options={medicines.map(m => ({ 
-                    value: m.id, 
-                    label: `${m.name} | ${m.generic_name || 'Generic'} [Stock: ${m.total_stock} ${m.base_unit?.abbreviation}]` 
-                  }))}
+                  async={true}
+                  onSearch={async (query) => {
+                    const res = await getMedicines(undefined, query, 50, true);
+                    return res.filter(m => m.is_active).map(m => ({
+                      value: m.id,
+                      label: `${m.name} | ${m.generic_name || 'Generic'} [Stock: ${m.total_stock} ${m.base_unit?.abbreviation || 'PCS'}]`
+                    }));
+                  }}
                   placeholder="Type to search medicine..."
                   helpText="Type and search product name or generic composition."
                 />

@@ -10,7 +10,6 @@ import { getBatches, createBatch, updateBatch, deleteBatch, getMedicines } from 
 
 const Batches = () => {
   const [batches, setBatches] = useState([]);
-  const [medicines, setMedicines] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -41,12 +40,8 @@ const Batches = () => {
     setLoading(true);
     setError(null);
     try {
-      const [batchesData, medsData] = await Promise.all([
-        getBatches(),
-        getMedicines()
-      ]);
+      const batchesData = await getBatches();
       setBatches(batchesData);
-      setMedicines(medsData);
     } catch (err) {
       console.error(err);
       setError('Failed to fetch batches data. Please try again.');
@@ -56,10 +51,6 @@ const Batches = () => {
   };
 
   const handleOpenCreate = () => {
-    if (medicines.length === 0) {
-      alert('Please add at least one medicine to the catalog first.');
-      return;
-    }
     setFormData({
       medicine_id: '',
       batch_no: '',
@@ -335,7 +326,11 @@ const Batches = () => {
               required
               value={formData.medicine_id}
               onChange={handleFormChange}
-              options={medicines.map(m => ({ value: m.id, label: `${m.name} (${m.sku})` }))}
+              async={true}
+              onSearch={async (query) => {
+                const res = await getMedicines(undefined, query, 50, true);
+                return res.map(m => ({ value: m.id, label: `${m.name} (${m.sku})` }));
+              }}
               placeholder="Type medicine name or SKU..."
             />
 

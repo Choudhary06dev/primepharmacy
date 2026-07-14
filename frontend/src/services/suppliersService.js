@@ -13,6 +13,9 @@ const getActivePharmacyId = () => {
 };
 
 const getInitialSuppliers = () => {
+  if (!isMockMode()) {
+    return [];
+  }
   const stored = localStorage.getItem(STORAGE_KEY);
   return stored ? JSON.parse(stored) : [];
 };
@@ -23,14 +26,18 @@ const saveSuppliers = () => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(mockSuppliers));
 };
 
+let suppliersCache = null;
+
 export const getSuppliers = async () => {
   if (isMockMode()) {
     await delay(200);
     const pharmacyId = getActivePharmacyId();
     return mockSuppliers.filter((s) => s.pharmacy_id === pharmacyId || s.pharmacy_id === undefined || s.pharmacy_id === null);
   }
+  if (suppliersCache) return suppliersCache;
   const response = await api.get('/suppliers');
-  return response.data;
+  suppliersCache = response.data;
+  return suppliersCache;
 };
 
 export const createSupplier = async (data) => {
@@ -54,6 +61,7 @@ export const createSupplier = async (data) => {
 
   try {
     const response = await api.post('/suppliers', data);
+    suppliersCache = null;
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.message || 'Failed to create supplier.');
@@ -80,6 +88,7 @@ export const updateSupplier = async (id, data) => {
 
   try {
     const response = await api.put(`/suppliers/${id}`, data);
+    suppliersCache = null;
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.message || 'Failed to update supplier.');
@@ -106,6 +115,7 @@ export const deleteSupplier = async (id) => {
 
   try {
     const response = await api.delete(`/suppliers/${id}`);
+    suppliersCache = null;
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.message || 'Failed to delete supplier.');

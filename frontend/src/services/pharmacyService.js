@@ -2,7 +2,12 @@ import api from './api';
 
 const STORAGE_KEY = 'primepharm_mock_pharmacies';
 
+const isMockMode = () => localStorage.getItem('primepharm_auth_mode') === 'mock';
+
 const getInitialPharmacies = () => {
+  if (!isMockMode()) {
+    return [];
+  }
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored) {
     try {
@@ -25,9 +30,9 @@ const savePharmacies = () => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(mockPharmacies));
 };
 
-const isMockMode = () => localStorage.getItem('primepharm_auth_mode') === 'mock';
-
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+let pharmaciesCache = null;
 
 export const getPharmacies = async () => {
   if (isMockMode()) {
@@ -44,8 +49,10 @@ export const getPharmacies = async () => {
       };
     });
   }
+  if (pharmaciesCache) return pharmaciesCache;
   const response = await api.get('/pharmacies');
-  return response.data;
+  pharmaciesCache = response.data;
+  return pharmaciesCache;
 };
 
 export const createPharmacy = async (data) => {
@@ -107,6 +114,7 @@ export const createPharmacy = async (data) => {
   }
 
   const response = await api.post('/pharmacies', data);
+  pharmaciesCache = null;
   return response.data;
 };
 
@@ -179,6 +187,7 @@ export const updatePharmacy = async (id, data) => {
   }
 
   const response = await api.put(`/pharmacies/${id}`, data);
+  pharmaciesCache = null;
   return response.data;
 };
 
@@ -194,5 +203,6 @@ export const deletePharmacy = async (id) => {
   }
 
   const response = await api.delete(`/pharmacies/${id}`);
+  pharmaciesCache = null;
   return response.data;
 };

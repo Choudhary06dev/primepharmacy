@@ -8,12 +8,12 @@ import SearchableSelect from '../../../components/UI/SearchableSelect';
 import Modal from '../../../components/UI/Modal';
 import { getPurchases, getPurchaseDetails, createPurchase } from '../../../services/purchasesService';
 import { getSuppliers } from '../../../services/suppliersService';
-import { getMedicines, getUnits, getCategories, getCompanies, createMedicine } from '../../../services/inventoryService';
+import { getMedicines, getMedicine, getUnits, getCategories, getCompanies, createMedicine } from '../../../services/inventoryService';
 
 const Purchases = () => {
   const [purchases, setPurchases] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
-  const [medicines, setMedicines] = useState([]);
+
   const [units, setUnits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -117,17 +117,15 @@ const Purchases = () => {
     setLoading(true);
     setError(null);
     try {
-      const [purchData, supData, medData, unitsData, catsData, compsData] = await Promise.all([
+      const [purchData, supData, unitsData, catsData, compsData] = await Promise.all([
         getPurchases(),
         getSuppliers(),
-        getMedicines(),
         getUnits(),
         getCategories(),
         getCompanies(),
       ]);
       setPurchases(purchData);
       setSuppliers(supData);
-      setMedicines(medData.filter((m) => m.is_active));
       setUnits(unitsData);
       setCategories(catsData);
       setCompanies(compsData);
@@ -139,7 +137,7 @@ const Purchases = () => {
     }
   };
 
-  // Medicine Selection Change in Form
+  // Medicine Selection Change in Form — fetch full details from server
   useEffect(() => {
     if (!selectedMedId) {
       setSelectedMed(null);
@@ -148,12 +146,20 @@ const Purchases = () => {
       setSalePrice('');
       return;
     }
-    const med = medicines.find((m) => m.id === Number(selectedMedId));
-    setSelectedMed(med);
-    setSelectedUnitId(med?.base_unit_id || '');
-    setUnitCost('');
-    setSalePrice('');
-  }, [selectedMedId, medicines]);
+    const loadMedicine = async () => {
+      try {
+        const med = await getMedicine(selectedMedId);
+        setSelectedMed(med);
+        setSelectedUnitId(med?.base_unit_id || '');
+        setUnitCost('');
+        setSalePrice('');
+      } catch (err) {
+        console.error('Error loading medicine details:', err);
+        setSelectedMedId('');
+      }
+    };
+    loadMedicine();
+  }, [selectedMedId]);
 
   // Available units based on selected medicine
   const activeUnitOptions = useMemo(() => {
@@ -533,7 +539,11 @@ const Purchases = () => {
                 <SearchableSelect
                   value={selectedMedId}
                   onChange={(e) => setSelectedMedId(e.target.value)}
-                  options={medicines.map((m) => ({ value: m.id, label: m.name }))}
+                  async={true}
+                  onSearch={async (query) => {
+                    const res = await getMedicines(undefined, query, 50, true);
+                    return res.filter(m => m.is_active).map(m => ({ value: m.id, label: m.name }));
+                  }}
                   placeholder="Type to search product..."
                 />
               </div>

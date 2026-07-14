@@ -14,6 +14,9 @@ const getActivePharmacyId = () => {
 };
 
 const getInitialPurchases = () => {
+  if (!isMockMode()) {
+    return [];
+  }
   const stored = localStorage.getItem(STORAGE_KEY);
   return stored ? JSON.parse(stored) : [];
 };

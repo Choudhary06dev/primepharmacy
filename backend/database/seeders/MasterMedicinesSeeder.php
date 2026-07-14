@@ -365,7 +365,7 @@ class MasterMedicinesSeeder extends Seeder
 
         $companyNames = array_keys($companies);
 
-        $totalTarget = 1000;
+        $totalTarget = 15000;
         $originalCount = count($originalMedicines);
         $additionalNeed = $totalTarget - $originalCount;
 

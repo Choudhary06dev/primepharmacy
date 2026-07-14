@@ -5,46 +5,78 @@ const SearchableSelect = ({
   name,
   value,
   onChange,
-  options = [], // Array of { value, label }
+  options = [], // Array of { value, label } if client-side
   required = false,
   error,
   helpText,
   disabled = false,
   className = '',
   placeholder = 'Type to search...',
+  async = false,
+  onSearch = null, // async callback: (query) => Promise<Array<{value, label}>>
+  selectedLabel = '', // Fallback label for display
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [asyncOptions, setAsyncOptions] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const containerRef = useRef(null);
   const inputRef = useRef(null);
+  const debounceRef = useRef(null);
+
+  // If async and dropdown is closed, fallback to options prop for label resolution
+  const activeOptions = (async && isOpen) ? asyncOptions : (options.length > 0 ? options : asyncOptions);
 
   const selectedOption = useMemo(() => {
-    return options.find((o) => String(o.value) === String(value));
-  }, [value, options]);
+    return activeOptions.find((o) => String(o.value) === String(value));
+  }, [value, activeOptions]);
 
   // Sync search text with value prop
   useEffect(() => {
     if (selectedOption) {
       setSearch(selectedOption.label);
+    } else if (selectedLabel) {
+      setSearch(selectedLabel);
     } else {
-      setSearch('');
+      if (!isOpen) {
+        setSearch('');
+      }
     }
-  }, [value, selectedOption]);
+  }, [value, selectedOption, isOpen, selectedLabel]);
 
-  // Check if user is actively searching (input text differs from selected option label)
-  const isSearching = isOpen && search !== (selectedOption?.label || '');
+  // Load initial async options
+  useEffect(() => {
+    if (async && onSearch && isOpen && activeOptions.length === 0) {
+      loadAsyncOptions('');
+    }
+  }, [async, onSearch, isOpen]);
 
+  const loadAsyncOptions = async (query) => {
+    setLoading(true);
+    try {
+      const res = await onSearch(query);
+      setAsyncOptions(res || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Reset highlight index when options change
   const filteredOptions = useMemo(() => {
+    if (async) return asyncOptions;
+
+    const isSearching = isOpen && search !== (selectedOption?.label || '');
     const query = isSearching ? search.toLowerCase().trim() : '';
     if (!query) return options.slice(0, 30);
 
     return options
       .filter((opt) => opt.label.toLowerCase().includes(query))
       .slice(0, 30);
-  }, [search, options, isSearching]);
+  }, [search, options, async, asyncOptions, isOpen, selectedOption]);
 
-  // Reset highlight index when options change
   useEffect(() => {
     setHighlightedIndex(filteredOptions.length > 0 ? 0 : -1);
   }, [filteredOptions]);
@@ -125,15 +157,21 @@ const SearchableSelect = ({
           value={search}
           onFocus={() => {
             setIsOpen(true);
-            // Select text to allow easy clearing/overwrite
             setTimeout(() => inputRef.current?.select(), 50);
           }}
           onChange={(e) => {
-            setSearch(e.target.value);
+            const val = e.target.value;
+            setSearch(val);
             if (!isOpen) setIsOpen(true);
-            if (e.target.value === '') {
-              // Trigger onChange with empty value if cleared
+            if (val === '') {
               onChange({ target: { name, value: '' } });
+            }
+
+            if (async && onSearch) {
+              if (debounceRef.current) clearTimeout(debounceRef.current);
+              debounceRef.current = setTimeout(() => {
+                loadAsyncOptions(val);
+              }, 300);
             }
           }}
           onKeyDown={handleKeyDown}
@@ -174,7 +212,9 @@ const SearchableSelect = ({
 
       {isOpen && !disabled && (
         <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 max-h-60 overflow-y-auto rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-xl py-1">
-          {filteredOptions.length === 0 ? (
+          {loading ? (
+            <div className="px-4 py-2.5 text-xs text-slate-400">Loading...</div>
+          ) : filteredOptions.length === 0 ? (
             <div className="px-4 py-2.5 text-xs text-slate-400">No results found</div>
           ) : (
             filteredOptions.map((opt, idx) => {

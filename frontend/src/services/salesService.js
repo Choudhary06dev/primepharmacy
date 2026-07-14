@@ -299,13 +299,44 @@ export const checkoutPOS = async (data) => {
   }
 };
 
-export const getInvoices = async () => {
+export const getInvoices = async (page, search = '', perPage = 25) => {
   if (isMockMode()) {
     await delay(200);
     const pharmacyId = getActivePharmacyId();
-    return mockSales.filter((s) => s.pharmacy_id === pharmacyId || s.pharmacy_id === undefined || s.pharmacy_id === null);
+    const filtered = mockSales.filter((s) => s.pharmacy_id === pharmacyId || s.pharmacy_id === undefined || s.pharmacy_id === null);
+    
+    const activeSearch = String(search || '').toLowerCase();
+    const searched = activeSearch
+      ? filtered.filter(s => 
+          String(s.invoice_no || '').toLowerCase().includes(activeSearch) || 
+          String(s.customer?.name || '').toLowerCase().includes(activeSearch)
+        )
+      : filtered;
+
+    if (page !== undefined) {
+      const start = (page - 1) * perPage;
+      const end = start + perPage;
+      return {
+        data: searched.slice(start, end),
+        total: searched.length,
+        current_page: page,
+        per_page: perPage,
+        last_page: Math.ceil(searched.length / perPage)
+      };
+    }
+    return searched;
   }
-  const response = await api.get('/sales/invoices');
+  
+  const params = {};
+  if (page !== undefined) {
+    params.page = page;
+    params.search = search;
+    params.per_page = perPage;
+  } else {
+    params.paginate = 'false';
+  }
+
+  const response = await api.get('/sales/invoices', { params });
   return response.data;
 };
 

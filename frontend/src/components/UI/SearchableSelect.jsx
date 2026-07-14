@@ -185,7 +185,7 @@ const SearchableSelect = ({
           }`}
         />
         
-        {/* Toggle arrow icon */}
+        {/* Toggle arrow icon / Spinner */}
         <div 
           onClick={() => {
             if (!disabled) {
@@ -195,27 +195,34 @@ const SearchableSelect = ({
           }}
           className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            className={`w-5 h-5 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-          >
-            <path
-              fillRule="evenodd"
-              d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-              clipRule="evenodd"
-            />
-          </svg>
+          {loading ? (
+            <svg className="animate-spin h-4.5 w-4.5 text-brand-500" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+          ) : (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className={`w-5 h-5 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+            >
+              <path
+                fillRule="evenodd"
+                d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                clipRule="evenodd"
+              />
+            </svg>
+          )}
         </div>
       </div>
 
       {isOpen && !disabled && (
         <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 max-h-60 overflow-y-auto rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-xl py-1">
-          {loading ? (
-            <div className="px-4 py-2.5 text-xs text-slate-400">Loading...</div>
-          ) : filteredOptions.length === 0 ? (
-            <div className="px-4 py-2.5 text-xs text-slate-400">No results found</div>
+          {filteredOptions.length === 0 ? (
+            <div className="px-4 py-2.5 text-xs text-slate-400">
+              {loading ? 'Searching catalog...' : 'No results found'}
+            </div>
           ) : (
             filteredOptions.map((opt, idx) => {
               const isSelected = String(opt.value) === String(value);

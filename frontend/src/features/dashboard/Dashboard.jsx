@@ -48,6 +48,7 @@ const formatYAxisVal = (val) => {
 const Dashboard = () => {
   const { user, pharmacy } = useAuth();
   const navigate = useNavigate();
+  const isSuperAdmin = user?.pharmacy_id === null || user?.roles?.[0]?.toLowerCase() === 'super admin';
 
   const [statsData, setStatsData] = useState(null);
   const [reportsData, setReportsData] = useState(null);
@@ -158,9 +159,11 @@ const Dashboard = () => {
 
   /* ── Animated counter values ── */
   const animatedTodaySales = useCountUp(Math.round(Number(statsData?.today_sales ?? 0)), 1600, !loading);
+  const animatedMonthSales = useCountUp(Math.round(Number(statsData?.this_month_sales ?? 0)), 1600, !loading);
   const animatedPurchases = useCountUp(statsData?.purchase_orders ?? 0, 1200, !loading);
   const animatedBatches = useCountUp(statsData?.active_batches ?? 0, 1200, !loading);
   const animatedLowStock = useCountUp(statsData?.low_stock_alerts ?? 0, 1000, !loading);
+  const animatedExpired = useCountUp(statsData?.expired_batches ?? 0, 1000, !loading);
   const animatedCustomers = useCountUp(customerCount, 1200, !loading);
   const animatedSuppliers = useCountUp(supplierCount, 1200, !loading);
 
@@ -176,11 +179,11 @@ const Dashboard = () => {
     if (!monthlyTrend || monthlyTrend.length === 0) return [];
     const maxVal = Math.max(...monthlyTrend.map((t) => t.sales), 10);
     const svgWidth = 500;
-    const svgHeight = 240;
-    const paddingLeft = 50;
-    const paddingRight = 20;
+    const svgHeight = 150;
+    const paddingLeft = 40;
+    const paddingRight = 10;
     const paddingTop = 15;
-    const paddingBottom = 35;
+    const paddingBottom = 25;
 
     const chartWidth = svgWidth - paddingLeft - paddingRight;
     const chartHeight = svgHeight - paddingTop - paddingBottom;
@@ -243,6 +246,15 @@ const Dashboard = () => {
       bgDark: 'rgba(16, 185, 129, 0.12)',
     },
     {
+      title: "Month's Sales",
+      value: loading ? '...' : formatCurrency(animatedMonthSales),
+      sub: 'Month to date sales',
+      icon: '📈',
+      gradient: 'linear-gradient(135deg, #0284c7, #38bdf8)',
+      bgLight: 'rgba(2, 132, 199, 0.08)',
+      bgDark: 'rgba(2, 132, 199, 0.12)',
+    },
+    {
       title: 'Purchase Orders',
       value: loading ? '...' : String(animatedPurchases),
       sub: `${statsData?.purchase_orders_this_month ?? 0} this month`,
@@ -269,6 +281,16 @@ const Dashboard = () => {
       bgLight: 'rgba(217, 119, 6, 0.08)',
       bgDark: 'rgba(217, 119, 6, 0.12)',
       pulse: (statsData?.critical_warnings ?? 0) > 0,
+    },
+    {
+      title: 'Expired Batches',
+      value: loading ? '...' : String(animatedExpired),
+      sub: `${statsData?.expired_batches ?? 0} batches expired`,
+      icon: '☠️',
+      gradient: 'linear-gradient(135deg, #e11d48, #fb7185)',
+      bgLight: 'rgba(225, 29, 72, 0.08)',
+      bgDark: 'rgba(225, 29, 72, 0.12)',
+      pulse: (statsData?.expired_batches ?? 0) > 0,
     },
     {
       title: 'Customers',
@@ -394,15 +416,12 @@ const Dashboard = () => {
           animation: dashShimmer 1.5s ease infinite;
         }
 
-        /* ── Welcome Banner ── */
         .dash-welcome {
           position: relative;
           overflow: hidden;
           border-radius: 12px;
-          padding: 32px 36px;
-          background: linear-gradient(135deg, #059669, #10b981, #0891b2, #2563eb);
-          background-size: 300% 300%;
-          animation: dashGradientShift 8s ease infinite;
+          padding: 16px 24px;
+          background: linear-gradient(135deg, #0284c7, #1e40af);
           color: #fff;
           border: 1px solid rgba(255,255,255,0.12);
         }
@@ -414,81 +433,82 @@ const Dashboard = () => {
           pointer-events: none;
         }
         .dash-welcome h1 {
-          font-size: 1.75rem;
+          font-size: 1.35rem;
           font-weight: 700;
-          margin: 0 0 6px;
+          margin: 0 0 4px;
           position: relative;
           z-index: 1;
         }
         .dash-welcome .dash-subtitle {
-          font-size: 0.85rem;
+          font-size: 0.78rem;
           opacity: 0.88;
           position: relative;
           z-index: 1;
           max-width: 600px;
-          line-height: 1.5;
+          line-height: 1.4;
         }
         .dash-welcome .dash-datetime {
           position: absolute;
-          right: 36px;
+          right: 24px;
           top: 50%;
           transform: translateY(-50%);
           text-align: right;
           z-index: 1;
         }
         .dash-welcome .dash-datetime .dash-time {
-          font-size: 2rem;
+          font-size: 1.45rem;
           font-weight: 700;
           font-family: 'Outfit', sans-serif;
-          letter-spacing: 1px;
+          letter-spacing: 0.5px;
         }
         .dash-welcome .dash-datetime .dash-date {
-          font-size: 0.78rem;
+          font-size: 0.7rem;
           opacity: 0.8;
-          margin-top: 2px;
+          margin-top: 1px;
         }
         .dash-welcome .dash-role-badge {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          margin-top: 10px;
-          padding: 4px 14px;
+          margin-top: 6px;
+          padding: 2px 10px;
           border-radius: 20px;
           background: rgba(255,255,255,0.18);
           backdrop-filter: blur(6px);
-          font-size: 0.72rem;
+          font-size: 0.65rem;
           font-weight: 600;
           text-transform: uppercase;
-          letter-spacing: 1.2px;
+          letter-spacing: 1.0px;
           position: relative;
           z-index: 1;
           animation: dashFloatBadge 3s ease infinite;
         }
 
         @media (max-width: 768px) {
-          .dash-welcome { padding: 24px 20px; }
-          .dash-welcome h1 { font-size: 1.35rem; }
+          .dash-welcome { padding: 16px 16px; }
+          .dash-welcome h1 { font-size: 1.2rem; }
           .dash-welcome .dash-datetime {
             position: static;
             transform: none;
             text-align: left;
-            margin-top: 12px;
+            margin-top: 10px;
           }
-          .dash-welcome .dash-datetime .dash-time { font-size: 1.5rem; }
+          .dash-welcome .dash-datetime .dash-time { font-size: 1.25rem; }
         }
 
         /* ── KPI Cards ── */
         .dash-kpi-grid {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 16px;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 10px;
         }
-        @media (max-width: 1024px) { .dash-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
-        @media (max-width: 640px)  { .dash-kpi-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 1200px) { .dash-kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 768px) { .dash-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 480px) { .dash-kpi-grid { grid-template-columns: 1fr; } }
 
         .dash-kpi-card {
-          border-radius: 12px;
-          padding: 22px 20px;
+          border-radius: 10px;
+          padding: 12px 14px;
           border: 1px solid var(--color-border-primary);
           background: var(--color-surface-card);
           cursor: default;
@@ -514,12 +534,12 @@ const Dashboard = () => {
           background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
         }
         .dash-kpi-card:hover {
-          transform: translateY(-6px) scale(1.03);
+          transform: translateY(-4px) scale(1.02);
           border-color: var(--dash-card-accent, var(--color-border-primary));
-          box-shadow: 0 12px 32px var(--dash-card-glow, rgba(0,0,0,0.08));
+          box-shadow: 0 8px 24px var(--dash-card-glow, rgba(0,0,0,0.06));
         }
         .dark .dash-kpi-card:hover {
-          box-shadow: 0 12px 32px var(--dash-card-glow-dark, rgba(0,0,0,0.5));
+          box-shadow: 0 8px 24px var(--dash-card-glow-dark, rgba(0,0,0,0.4));
         }
         /* Icon bounces on card hover */
         .dash-kpi-card:hover .dash-kpi-icon {
@@ -530,35 +550,35 @@ const Dashboard = () => {
           animation: dashValuePop 0.4s ease;
         }
         .dash-kpi-card .dash-kpi-icon {
-          width: 46px;
-          height: 46px;
-          border-radius: 12px;
+          width: 36px;
+          height: 36px;
+          border-radius: 8px;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 1.3rem;
+          font-size: 1.05rem;
           flex-shrink: 0;
           transition: transform 0.3s ease, box-shadow 0.3s ease;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+          box-shadow: 0 4px 10px rgba(0,0,0,0.08);
         }
         .dash-kpi-card .dash-kpi-title {
-          font-size: 0.7rem;
+          font-size: 0.68rem;
           font-weight: 600;
           text-transform: uppercase;
-          letter-spacing: 1px;
+          letter-spacing: 0.8px;
           color: var(--color-text-tertiary);
-          margin-bottom: 8px;
+          margin-bottom: 4px;
         }
         .dash-kpi-card .dash-kpi-value {
-          font-size: 1.55rem;
+          font-size: 1.25rem;
           font-weight: 700;
           font-family: 'Outfit', sans-serif;
           color: var(--color-text-primary);
-          margin-bottom: 6px;
+          margin-bottom: 2px;
           transition: color 0.3s ease;
         }
         .dash-kpi-card .dash-kpi-sub {
-          font-size: 0.68rem;
+          font-size: 0.65rem;
           color: var(--color-text-tertiary);
           opacity: 0.85;
           display: flex;
@@ -566,8 +586,8 @@ const Dashboard = () => {
           gap: 4px;
         }
         .dash-kpi-card .dash-pulse-dot {
-          width: 8px;
-          height: 8px;
+          width: 7px;
+          height: 7px;
           border-radius: 50%;
           background: #ef4444;
           animation: dashPulse 1.5s infinite;
@@ -578,64 +598,66 @@ const Dashboard = () => {
 
         /* ── Section Container ── */
         .dash-section {
-          border-radius: 10px;
-          padding: 24px;
+          border-radius: 8px;
+          padding: 16px;
           border: 1px solid var(--color-border-primary);
           background: var(--color-surface-card);
           opacity: 0;
           animation: dashFadeInUp 0.6s ease forwards;
+          display: flex;
+          flex-direction: column;
         }
         .dash-section-title {
-          font-size: 1rem;
+          font-size: 0.9rem;
           font-weight: 700;
           font-family: 'Outfit', sans-serif;
           color: var(--color-text-primary);
-          margin: 0 0 18px;
+          margin: 0 0 12px;
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 6px;
         }
         .dash-section-title .dash-title-icon {
-          font-size: 1.1rem;
+          font-size: 1.0rem;
         }
 
         /* ── Financial Overview ── */
         .dash-fin-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
-          gap: 14px;
+          gap: 12px;
         }
         @media (max-width: 640px) { .dash-fin-grid { grid-template-columns: 1fr; } }
         .dash-fin-item {
-          padding: 16px;
-          border-radius: 8px;
+          padding: 10px 12px;
+          border-radius: 6px;
           background: var(--color-surface-tertiary);
           border: 1px solid var(--color-border-primary);
         }
         .dash-fin-item .dash-fin-label {
-          font-size: 0.68rem;
+          font-size: 0.65rem;
           font-weight: 600;
           text-transform: uppercase;
-          letter-spacing: 0.8px;
+          letter-spacing: 0.6px;
           color: var(--color-text-tertiary);
-          margin-bottom: 4px;
+          margin-bottom: 2px;
         }
         .dash-fin-item .dash-fin-value {
-          font-size: 1.15rem;
+          font-size: 1.05rem;
           font-weight: 700;
           font-family: 'Outfit', sans-serif;
           color: var(--color-text-primary);
         }
         .dash-fin-item .dash-fin-bar {
-          height: 4px;
-          border-radius: 4px;
-          margin-top: 10px;
+          height: 3px;
+          border-radius: 3px;
+          margin-top: 8px;
           overflow: hidden;
           background: var(--color-surface-hover);
         }
         .dash-fin-item .dash-fin-bar-fill {
           height: 100%;
-          border-radius: 4px;
+          border-radius: 3px;
           transition: width 1.2s ease;
         }
 
@@ -643,8 +665,8 @@ const Dashboard = () => {
         .dash-chart-container {
           position: relative;
           width: 100%;
-          height: 240px;
-          padding-top: 8px;
+          height: 185px;
+          padding-top: 4px;
         }
         .dash-chart-svg {
           width: 100%;
@@ -700,12 +722,12 @@ const Dashboard = () => {
           letter-spacing: 0.8px;
           color: var(--color-text-tertiary);
           text-align: left;
-          padding: 8px 12px;
+          padding: 6px 8px;
           border-bottom: 1px solid var(--color-border-primary);
         }
         .dash-table td {
-          font-size: 0.78rem;
-          padding: 10px 12px;
+          font-size: 0.75rem;
+          padding: 8px 8px;
           border-bottom: 1px solid var(--color-border-primary);
           color: var(--color-text-primary);
           vertical-align: middle;
@@ -718,8 +740,8 @@ const Dashboard = () => {
           background: var(--color-surface-hover);
         }
         .dash-medal {
-          font-size: 1.1rem;
-          margin-right: 6px;
+          font-size: 1.0rem;
+          margin-right: 4px;
           vertical-align: middle;
         }
 
@@ -727,30 +749,30 @@ const Dashboard = () => {
         .dash-expiry-item {
           display: flex;
           align-items: center;
-          gap: 12px;
-          padding: 12px 14px;
-          border-radius: 8px;
+          gap: 10px;
+          padding: 8px 10px;
+          border-radius: 6px;
           background: var(--color-surface-tertiary);
           border: 1px solid var(--color-border-primary);
-          margin-bottom: 10px;
+          margin-bottom: 8px;
           opacity: 0;
           animation: dashFadeInUp 0.4s ease forwards;
         }
         .dash-expiry-days {
-          min-width: 48px;
-          height: 48px;
-          border-radius: 10px;
+          min-width: 36px;
+          height: 36px;
+          border-radius: 6px;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
           font-family: 'Outfit', sans-serif;
           font-weight: 700;
-          font-size: 1.1rem;
+          font-size: 0.95rem;
           flex-shrink: 0;
         }
         .dash-expiry-days span {
-          font-size: 0.55rem;
+          font-size: 0.5rem;
           font-weight: 600;
           text-transform: uppercase;
           letter-spacing: 0.5px;
@@ -761,33 +783,33 @@ const Dashboard = () => {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 12px 14px;
-          border-radius: 8px;
+          padding: 8px 10px;
+          border-radius: 6px;
           background: var(--color-surface-tertiary);
           border: 1px solid var(--color-border-primary);
-          margin-bottom: 10px;
+          margin-bottom: 8px;
           opacity: 0;
           animation: dashSlideInLeft 0.4s ease forwards;
         }
         .dash-sale-inv {
-          font-size: 0.8rem;
+          font-size: 0.75rem;
           font-weight: 600;
           font-family: 'Outfit', sans-serif;
           color: var(--color-text-primary);
         }
         .dash-sale-date {
-          font-size: 0.65rem;
+          font-size: 0.62rem;
           color: var(--color-text-tertiary);
-          margin-top: 2px;
+          margin-top: 1px;
         }
         .dash-sale-cust {
-          font-size: 0.72rem;
+          font-size: 0.68rem;
           font-weight: 500;
           color: var(--color-text-brand);
           margin-top: 1px;
         }
         .dash-sale-amount {
-          font-size: 0.85rem;
+          font-size: 0.8rem;
           font-weight: 700;
           font-family: 'Outfit', sans-serif;
           color: var(--color-text-primary);
@@ -797,34 +819,33 @@ const Dashboard = () => {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          padding: 3px 10px;
+          padding: 2px 8px;
           border-radius: 20px;
-          font-size: 0.6rem;
+          font-size: 0.58rem;
           font-weight: 700;
           text-transform: uppercase;
-          letter-spacing: 0.6px;
-          margin-top: 3px;
+          letter-spacing: 0.5px;
+          margin-top: 2px;
         }
 
         /* ── Quick Actions ── */
         .dash-actions-grid {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
-          gap: 12px;
+          gap: 10px;
         }
         @media (max-width: 768px) { .dash-actions-grid { grid-template-columns: repeat(2, 1fr); } }
         .dash-action-btn {
           display: flex;
-          flex-direction: column;
+          flex-direction: row;
           align-items: center;
-          justify-content: center;
-          gap: 8px;
-          padding: 20px 12px;
-          border-radius: 10px;
+          gap: 10px;
+          padding: 10px 12px;
+          border-radius: 8px;
           border: 1px solid var(--color-border-primary);
           background: var(--color-surface-tertiary);
           cursor: pointer;
-          font-size: 0.75rem;
+          font-size: 0.72rem;
           font-weight: 600;
           color: var(--color-text-primary);
           transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
@@ -832,13 +853,14 @@ const Dashboard = () => {
           animation: dashFadeInUp 0.5s ease forwards;
         }
         .dash-action-btn:hover {
-          transform: translateY(-3px);
+          transform: translateY(-2px);
           background: var(--color-surface-hover);
-          box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.06);
         }
-        .dark .dash-action-btn:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
+        .dark .dash-action-btn:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
         .dash-action-btn .dash-action-icon {
-          font-size: 1.6rem;
+          font-size: 1.25rem;
+          flex-shrink: 0;
         }
 
         /* ── System Health Footer ── */
@@ -887,11 +909,16 @@ const Dashboard = () => {
         }
         @media (max-width: 768px) { .dash-double-grid { grid-template-columns: 1fr; } }
         .dash-empty-state {
+          flex-grow: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           text-align: center;
           padding: 24px;
           color: var(--color-text-tertiary);
           font-size: 0.78rem;
           opacity: 0.7;
+          min-height: 100px;
         }
       `}</style>
 
@@ -1027,22 +1054,22 @@ const Dashboard = () => {
                 <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--color-text-tertiary)', marginBottom: '10px' }}>
                   📦 Inventory Valuation
                 </div>
-                <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
                   <div>
-                    <div style={{ fontSize: '0.65rem', color: 'var(--color-text-tertiary)' }}>Cost Value</div>
-                    <div style={{ fontSize: '1rem', fontWeight: 700, fontFamily: "'Outfit', sans-serif", color: 'var(--color-text-primary)' }}>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--color-text-tertiary)', marginBottom: '2px' }}>Cost Value</div>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 700, fontFamily: "'Outfit', sans-serif", color: 'var(--color-text-primary)' }}>
                       {formatCurrency(inventoryVal.cost_value)}
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.65rem', color: 'var(--color-text-tertiary)' }}>Retail Value</div>
-                    <div style={{ fontSize: '1rem', fontWeight: 700, fontFamily: "'Outfit', sans-serif", color: '#059669' }}>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--color-text-tertiary)', marginBottom: '2px' }}>Retail Value</div>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 700, fontFamily: "'Outfit', sans-serif", color: '#059669' }}>
                       {formatCurrency(inventoryVal.retail_value)}
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.65rem', color: 'var(--color-text-tertiary)' }}>Margin</div>
-                    <div style={{ fontSize: '1rem', fontWeight: 700, fontFamily: "'Outfit', sans-serif", color: '#2563eb' }}>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--color-text-tertiary)', marginBottom: '2px' }}>Margin</div>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 700, fontFamily: "'Outfit', sans-serif", color: '#2563eb' }}>
                       {formatCurrency(inventoryVal.margin)}
                     </div>
                   </div>
@@ -1062,7 +1089,7 @@ const Dashboard = () => {
             ) : monthlyTrend.length > 0 ? (
               <>
                 <div className="dash-chart-container">
-                  <svg className="dash-chart-svg" viewBox="0 0 500 240">
+                  <svg className="dash-chart-svg" viewBox="0 0 500 150">
                     <defs>
                       <linearGradient id="dash-bar-grad-normal" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#059669" />
@@ -1075,12 +1102,12 @@ const Dashboard = () => {
                     </defs>
 
                     {/* Grid lines */}
-                    {[15, 110, 205].map((y) => (
+                    {[15, 70, 125].map((y) => (
                       <line
                         key={y}
-                        x1="50"
+                        x1="40"
                         y1={y}
-                        x2="480"
+                        x2="490"
                         y2={y}
                         stroke="var(--color-border-primary)"
                         strokeWidth="0.5"
@@ -1093,12 +1120,12 @@ const Dashboard = () => {
                     {chartPoints.map((p, idx) => {
                       const r = Math.min(6, p.displayHeight);
                       const pathD = `
-                        M ${p.x} 205
+                        M ${p.x} 125
                         L ${p.x} ${p.y + r}
                         A ${r} ${r} 0 0 1 ${p.x + r} ${p.y}
                         L ${p.x + p.barWidth - r} ${p.y}
                         A ${r} ${r} 0 0 1 ${p.x + p.barWidth} ${p.y + r}
-                        L ${p.x + p.barWidth} 205
+                        L ${p.x + p.barWidth} 125
                         Z
                       `;
 
@@ -1112,7 +1139,7 @@ const Dashboard = () => {
                             x={p.x_center - 25}
                             y="15"
                             width="50"
-                            height="190"
+                            height="110"
                             fill="transparent"
                             style={{ cursor: 'pointer' }}
                             onMouseEnter={() => setHoveredPoint(idx)}
@@ -1132,7 +1159,7 @@ const Dashboard = () => {
                           {/* Month text label */}
                           <text
                             x={p.x_center}
-                            y="225"
+                            y="140"
                             textAnchor="middle"
                             style={{
                               fontSize: '9px',
@@ -1153,8 +1180,8 @@ const Dashboard = () => {
                       return (
                         <>
                           <text
-                            x="42"
-                            y="19"
+                            x="32"
+                            y="18"
                             textAnchor="end"
                             style={{
                               fontSize: '8px',
@@ -1166,8 +1193,8 @@ const Dashboard = () => {
                             {formatYAxisVal(maxVal)}
                           </text>
                           <text
-                            x="42"
-                            y="114"
+                            x="32"
+                            y="74"
                             textAnchor="end"
                             style={{
                               fontSize: '8px',
@@ -1179,8 +1206,8 @@ const Dashboard = () => {
                             {formatYAxisVal(maxVal / 2)}
                           </text>
                           <text
-                            x="42"
-                            y="209"
+                            x="32"
+                            y="129"
                             textAnchor="end"
                             style={{
                               fontSize: '8px',
@@ -1202,7 +1229,7 @@ const Dashboard = () => {
                       className="dash-chart-tooltip-v2"
                       style={{
                         left: `${(chartPoints[hoveredPoint].x_center / 500) * 100}%`,
-                        top: `${(chartPoints[hoveredPoint].y / 240) * 100}%`,
+                        top: `${(chartPoints[hoveredPoint].y / 150) * 100}%`,
                       }}
                     >
                       <div style={{ fontWeight: 600, color: 'var(--color-text-tertiary)', fontSize: '0.62rem', marginBottom: '2px' }}>
@@ -1253,7 +1280,7 @@ const Dashboard = () => {
         </div>
 
         {/* ═══════ 5 & 6. TOP MEDICINES + EXPIRING BATCHES ═══════ */}
-        <div className="dash-double-grid">
+        <div className="dash-main-grid">
           {/* Top Selling Medicines */}
           <div className="dash-section" style={{ animationDelay: '0.75s' }}>
             <div className="dash-section-title">
@@ -1390,14 +1417,17 @@ const Dashboard = () => {
                 <div
                   key={action.label}
                   className="dash-action-btn"
-                  style={{ animationDelay: `${0.2 + i * 0.07}s` }}
+                  style={{
+                    animationDelay: `${0.2 + i * 0.07}s`,
+                    borderLeft: `3px solid ${action.color}`
+                  }}
                   onClick={() => navigate(action.path)}
                   role="button"
                   tabIndex={0}
                   onKeyDown={(e) => e.key === 'Enter' && navigate(action.path)}
                 >
                   <span className="dash-action-icon">{action.icon}</span>
-                  {action.label}
+                  <span style={{ fontSize: '0.72rem', fontWeight: 600 }}>{action.label}</span>
                 </div>
               ))}
             </div>
@@ -1406,33 +1436,45 @@ const Dashboard = () => {
 
         {/* ═══════ 9. SYSTEM HEALTH FOOTER ═══════ */}
         <div className="dash-health-bar" style={{ animationDelay: '1.15s' }}>
-          <div className="dash-health-item">
-            <div className="dash-health-dot" style={{ background: '#22c55e' }} />
-            <span className="dash-health-label">API</span> Online
-          </div>
-          <div className="dash-health-item">
-            <div className="dash-health-dot" style={{ background: '#22c55e' }} />
-            <span className="dash-health-label">Database</span> PostgreSQL
-          </div>
-          <div className="dash-health-item">
-            <div className="dash-health-dot" style={{ background: '#22c55e' }} />
-            <span className="dash-health-label">Auth</span> Sanctum Token Secured
-          </div>
+          {isSuperAdmin ? (
+            <>
+              <div className="dash-health-item">
+                <div className="dash-health-dot" style={{ background: '#22c55e' }} />
+                <span className="dash-health-label">API</span> Online
+              </div>
+              <div className="dash-health-item">
+                <div className="dash-health-dot" style={{ background: '#22c55e' }} />
+                <span className="dash-health-label">Database</span> PostgreSQL
+              </div>
+              <div className="dash-health-item">
+                <div className="dash-health-dot" style={{ background: '#22c55e' }} />
+                <span className="dash-health-label">Auth</span> Sanctum Token Secured
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="dash-health-item">
+                <div className="dash-health-dot" style={{ background: '#22c55e' }} />
+                <span className="dash-health-label">POS Status</span> Terminal Active
+              </div>
+              <div className="dash-health-item">
+                <span className="dash-health-label">Branch:</span> {user?.branch?.name || 'Main Branch'}
+              </div>
+              <div className="dash-health-item">
+                <span className="dash-health-label">Subscription:</span> {pharmacy?.status === 'trial' ? 'Free Trial' : 'Active'}
+              </div>
+            </>
+          )}
           <div style={{ marginLeft: 'auto', display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
             <div className="dash-health-item">
               <span className="dash-health-label">Pharmacy:</span> {pharmacy?.name}
             </div>
             <div className="dash-health-item">
-              <span className="dash-health-label">Slug:</span>
-              <span style={{ fontFamily: 'monospace', color: 'var(--color-text-brand)' }}>/{pharmacy?.slug}</span>
-            </div>
-            <div className="dash-health-item">
-              <span className="dash-health-label">Trial Ends:</span>
-              {pharmacy?.trial_ends_at ? new Date(pharmacy.trial_ends_at).toLocaleDateString() : 'N/A'}
-            </div>
-            <div className="dash-health-item">
               <span className="dash-health-label">Role:</span>
               <span style={{ color: 'var(--color-text-brand)', textTransform: 'capitalize' }}>{user?.roles?.[0] || 'Member'}</span>
+            </div>
+            <div className="dash-health-item">
+              <span className="dash-health-label">System:</span> v1.2.0
             </div>
           </div>
         </div>

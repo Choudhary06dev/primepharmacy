@@ -58,15 +58,32 @@ class ReportController extends Controller
         $grossProfit = $totalSales - $totalCOGS;
         $netProfit = $grossProfit - $totalExpenses;
 
-        // 2. Monthly Sales Trend (Last 6 Months)
+        // 2. Monthly Sales Trend (Last 6 Months) (Optimized query with GROUP BY)
+        $sixMonthsAgo = Carbon::now()->subMonths(5)->startOfMonth();
+        $driver = DB::connection()->getDriverName();
+        if ($driver === 'sqlite') {
+            $formatExpr = "strftime('%Y-%m', sale_date)";
+        } elseif ($driver === 'pgsql') {
+            $formatExpr = "TO_CHAR(sale_date, 'YYYY-MM')";
+        } else {
+            $formatExpr = "DATE_FORMAT(sale_date, '%Y-%m')";
+        }
+
+        $salesTrend = Sale::where('sale_date', '>=', $sixMonthsAgo->toDateString())
+            ->select([
+                DB::raw("{$formatExpr} as month_key"),
+                DB::raw('SUM(grand_total) as total_sales')
+            ])
+            ->groupBy('month_key')
+            ->pluck('total_sales', 'month_key');
+
         $monthlySales = [];
         for ($i = 5; $i >= 0; $i--) {
             $month = Carbon::now()->subMonths($i);
+            $monthKey = $month->format('Y-m');
             $monthLabel = $month->format('M Y');
-            $salesVal = (double) Sale::whereMonth('sale_date', $month->month)
-                ->whereYear('sale_date', $month->year)
-                ->sum('grand_total');
-                
+            $salesVal = (double) ($salesTrend[$monthKey] ?? 0);
+            
             $monthlySales[] = [
                 'label' => $monthLabel,
                 'sales' => $salesVal

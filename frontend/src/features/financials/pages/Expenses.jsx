@@ -12,6 +12,8 @@ import {
   deleteExpense,
   getExpenseCategories,
   createExpenseCategory,
+  updateExpenseCategory,
+  deleteExpenseCategory,
 } from '../../../services/financialsService';
 
 const Expenses = () => {
@@ -39,6 +41,8 @@ const Expenses = () => {
 
   // Category Modal States
   const [isCatModalOpen, setIsCatModalOpen] = useState(false);
+  const [isCatEdit, setIsCatEdit] = useState(false);
+  const [currentCatId, setCurrentCatId] = useState(null);
   const [catFormData, setCatFormData] = useState({ name: '', description: '' });
   const [catFormError, setCatFormError] = useState(null);
   const [catSaving, setCatSaving] = useState(false);
@@ -139,7 +143,29 @@ const Expenses = () => {
   const handleOpenCreateCat = () => {
     setCatFormData({ name: '', description: '' });
     setCatFormError(null);
+    setIsCatEdit(false);
     setIsCatModalOpen(true);
+  };
+
+  const handleOpenEditCat = (cat) => {
+    setCatFormData({ name: cat.name, description: cat.description || '' });
+    setCatFormError(null);
+    setCurrentCatId(cat.id);
+    setIsCatEdit(true);
+    setIsCatModalOpen(true);
+  };
+
+  const handleDeleteCat = async (cat) => {
+    if (window.confirm(`Are you sure you want to delete the category "${cat.name}"?`)) {
+      setError(null);
+      try {
+        await deleteExpenseCategory(cat.id);
+        setCategories((prev) => prev.filter((item) => item.id !== cat.id));
+        showToast('Classification category deleted.');
+      } catch (err) {
+        setError(err.message || 'Failed to delete category.');
+      }
+    }
   };
 
   const handleCatChange = (e) => {
@@ -157,14 +183,20 @@ const Expenses = () => {
 
     setCatSaving(true);
     try {
-      const created = await createExpenseCategory(catFormData);
-      setCategories((prev) => [...prev, created]);
-      showToast('Expense category added successfully.');
+      if (isCatEdit) {
+        const updated = await updateExpenseCategory(currentCatId, catFormData);
+        setCategories((prev) => prev.map((item) => (item.id === currentCatId ? updated : item)));
+        showToast('Expense category updated successfully.');
+      } else {
+        const created = await createExpenseCategory(catFormData);
+        setCategories((prev) => [...prev, created]);
+        showToast('Expense category added successfully.');
+        // Automatically select this category if recording an expense
+        setExpFormData((prev) => ({ ...prev, expense_category_id: created.id }));
+      }
       setIsCatModalOpen(false);
-      // Automatically select this category if recording an expense
-      setExpFormData((prev) => ({ ...prev, expense_category_id: created.id }));
     } catch (err) {
-      setCatFormError(err.message || 'Failed to create category.');
+      setCatFormError(err.message || 'Failed to save category.');
     } finally {
       setCatSaving(false);
     }
@@ -237,6 +269,20 @@ const Expenses = () => {
       key: 'description',
       label: 'Description',
       render: (val) => <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>{val || 'N/A'}</span>,
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
+      render: (_, row) => (
+        <div className="flex items-center gap-3">
+          <button onClick={() => handleOpenEditCat(row)} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline">
+            Edit
+          </button>
+          <button onClick={() => handleDeleteCat(row)} className="text-xs font-bold text-red-600 dark:text-red-400 hover:underline">
+            Delete
+          </button>
+        </div>
+      ),
     },
   ];
 
@@ -388,7 +434,7 @@ const Expenses = () => {
       <Modal
         isOpen={isCatModalOpen}
         onClose={() => setIsCatModalOpen(false)}
-        title="Add Expense Classification"
+        title={isCatEdit ? "Edit Expense Classification" : "Add Expense Classification"}
         size="md"
         footer={
           <div className="flex gap-2">
@@ -396,7 +442,7 @@ const Expenses = () => {
               Cancel
             </Button>
             <Button variant="primary" type="submit" disabled={catSaving} onClick={handleCatSubmit}>
-              {catSaving ? 'Saving...' : 'Save Category'}
+              {catSaving ? 'Saving...' : (isCatEdit ? 'Update Category' : 'Save Category')}
             </Button>
           </div>
         }

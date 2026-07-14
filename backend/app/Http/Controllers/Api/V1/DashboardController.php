@@ -51,27 +51,44 @@ class DashboardController extends Controller
             ->where('remaining_quantity', '>', 0)
             ->count();
  
-        // 4. Low Stock Alerts & Critical warnings
-        $medicines = Medicine::where('is_active', true)
-            ->withSum(['batches' => function ($query) {
-                $query->where('status', 'ACTIVE')->where('remaining_quantity', '>', 0);
-            }], 'remaining_quantity')
-            ->get();
- 
-        $lowStockCount = 0;
-        $criticalWarnings = 0;
- 
-        foreach ($medicines as $med) {
-            $stock = (int) ($med->batches_sum_remaining_quantity ?? 0);
-            $minStock = (int) ($med->min_stock_level ?? 0);
- 
-            if ($stock <= $minStock) {
-                $lowStockCount++;
-                if ($stock === 0 && $minStock > 0) {
-                    $criticalWarnings++;
-                }
-            }
-        }
+        // 4. Low Stock Alerts & Critical warnings (Optimized aggregated SQL query)
+        $pharmacyId = app()->bound('tenant.id') ? (int) app('tenant.id') : 0;
+
+        $stockStats = Medicine::where('is_active', true)
+            ->selectRaw("
+                COUNT(CASE WHEN (
+                    SELECT COALESCE(SUM(remaining_quantity), 0)
+                    FROM medicine_batches
+                    WHERE medicine_batches.medicine_id = medicines.id
+                      AND medicine_batches.status = 'ACTIVE'
+                      AND medicine_batches.remaining_quantity > 0
+                      AND medicine_batches.pharmacy_id = {$pharmacyId}
+                ) <= medicines.min_stock_level THEN 1 END) as low_stock_count,
+                
+                COUNT(CASE WHEN (
+                    SELECT COALESCE(SUM(remaining_quantity), 0)
+                    FROM medicine_batches
+                    WHERE medicine_batches.medicine_id = medicines.id
+                      AND medicine_batches.status = 'ACTIVE'
+                      AND medicine_batches.remaining_quantity > 0
+                      AND medicine_batches.pharmacy_id = {$pharmacyId}
+                ) = 0 AND medicines.min_stock_level > 0 THEN 1 END) as critical_warnings
+            ")
+            ->first();
+
+        $lowStockCount = (int) ($stockStats->low_stock_count ?? 0);
+        $criticalWarnings = (int) ($stockStats->critical_warnings ?? 0);
+
+        // 5. This Month's Sales (MTD)
+        $thisMonthSales = (double) Sale::whereMonth('sale_date', Carbon::now()->month)
+            ->whereYear('sale_date', Carbon::now()->year)
+            ->sum('grand_total');
+
+        // 6. Expired Batches (FEFO alert)
+        $expiredBatches = MedicineBatch::where('status', 'ACTIVE')
+            ->where('remaining_quantity', '>', 0)
+            ->where('expiry_date', '<', Carbon::now()->toDateString())
+            ->count();
  
         return response()->json([
             'today_sales' => $todaySales,
@@ -81,6 +98,8 @@ class DashboardController extends Controller
             'active_batches' => $activeBatches,
             'low_stock_alerts' => $lowStockCount,
             'critical_warnings' => $criticalWarnings,
+            'this_month_sales' => $thisMonthSales,
+            'expired_batches' => $expiredBatches,
         ]);
     }
 }

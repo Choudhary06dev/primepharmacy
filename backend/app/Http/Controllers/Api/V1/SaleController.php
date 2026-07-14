@@ -16,9 +16,27 @@ class SaleController extends Controller
     /**
      * Display a listing of sales.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $sales = Sale::with(['customer', 'user'])->latest('id')->get();
+        $query = Sale::with(['customer', 'user']);
+
+        if ($request->filled('search')) {
+            $search = strtolower($request->query('search'));
+            $query->where(function ($q) use ($search) {
+                $q->whereRaw('LOWER(invoice_no) like ?', ["%{$search}%"])
+                  ->orWhereHas('customer', function ($qSub) use ($search) {
+                      $qSub->whereRaw('LOWER(name) like ?', ["%{$search}%"]);
+                  });
+            });
+        }
+
+        if ($request->query('paginate') === 'false') {
+            $sales = $query->latest('id')->get();
+            return response()->json($sales);
+        }
+
+        $perPage = $request->query('per_page', 25);
+        $sales = $query->latest('id')->paginate($perPage);
         return response()->json($sales);
     }
 

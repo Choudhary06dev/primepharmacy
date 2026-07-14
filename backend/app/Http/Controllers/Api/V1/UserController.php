@@ -110,11 +110,21 @@ class UserController extends Controller
 
         // Ensure the role exists for this pharmacy context before assigning
         if ($roleName !== 'Super Admin') {
-            \Spatie\Permission\Models\Role::query()->firstOrCreate([
+            $role = \Spatie\Permission\Models\Role::query()->firstOrCreate([
                 'name' => $roleName,
                 'guard_name' => 'web',
                 'pharmacy_id' => $pharmacyId,
             ]);
+
+            // Sync default permissions from the global role if this tenant role has none
+            if ($role->permissions()->count() === 0) {
+                $globalRole = \Spatie\Permission\Models\Role::where('name', $roleName)
+                    ->whereNull('pharmacy_id')
+                    ->first();
+                if ($globalRole) {
+                    $role->syncPermissions($globalRole->permissions()->pluck('name')->toArray());
+                }
+            }
         }
 
         // Assign Role using Spatie (handling teams)
@@ -201,11 +211,21 @@ class UserController extends Controller
 
         // Ensure the role exists for this pharmacy context before syncing
         if ($roleName !== 'Super Admin') {
-            \Spatie\Permission\Models\Role::query()->firstOrCreate([
+            $role = \Spatie\Permission\Models\Role::query()->firstOrCreate([
                 'name' => $roleName,
                 'guard_name' => 'web',
                 'pharmacy_id' => $user->pharmacy_id,
             ]);
+
+            // Sync default permissions from the global role if this tenant role has none
+            if ($role->permissions()->count() === 0) {
+                $globalRole = \Spatie\Permission\Models\Role::where('name', $roleName)
+                    ->whereNull('pharmacy_id')
+                    ->first();
+                if ($globalRole) {
+                    $role->syncPermissions($globalRole->permissions()->pluck('name')->toArray());
+                }
+            }
         }
 
         // Sync Spatie role

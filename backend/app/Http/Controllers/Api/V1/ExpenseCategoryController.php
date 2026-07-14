@@ -37,7 +37,10 @@ class ExpenseCategoryController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            return response()->json([
+                'message' => $validator->errors()->first(),
+                'errors' => $validator->errors()
+            ], 422);
         }
 
         $category = ExpenseCategory::create($validator->validated());
@@ -47,15 +50,15 @@ class ExpenseCategoryController extends Controller
     /**
      * Display the specified expense category.
      */
-    public function show(ExpenseCategory $expenseCategory)
+    public function show(ExpenseCategory $category)
     {
-        return response()->json($expenseCategory);
+        return response()->json($category);
     }
 
     /**
      * Update the specified expense category.
      */
-    public function update(Request $request, ExpenseCategory $expenseCategory)
+    public function update(Request $request, ExpenseCategory $category)
     {
         $validator = Validator::make($request->all(), [
             'name' => [
@@ -64,31 +67,34 @@ class ExpenseCategoryController extends Controller
                 'max:100',
                 Rule::unique('expense_categories')->where(function ($query) {
                     return $query->where('pharmacy_id', auth()->user()->pharmacy_id);
-                })->ignore($expenseCategory->id)
+                })->ignore($category->id)
             ],
             'description' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            return response()->json([
+                'message' => $validator->errors()->first(),
+                'errors' => $validator->errors()
+            ], 422);
         }
 
-        $expenseCategory->update($validator->validated());
-        return response()->json($expenseCategory);
+        $category->update($validator->validated());
+        return response()->json($category);
     }
 
     /**
      * Remove the specified expense category.
      */
-    public function destroy(ExpenseCategory $expenseCategory)
+    public function destroy(ExpenseCategory $category)
     {
-        if ($expenseCategory->expenses()->count() > 0) {
+        if ($category->expenses()->count() > 0) {
             return response()->json([
                 'message' => 'Cannot delete category: it has registered expenses.'
             ], 422);
         }
 
-        $expenseCategory->delete();
+        $category->delete();
         return response()->json(['success' => true]);
     }
 }

@@ -17,10 +17,20 @@ const Medicines = () => {
   const [success, setSuccess] = useState(null);
 
   // Pagination & Search States
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [totalRows, setTotalRows] = useState(0);
+
+  // Debounce search input to avoid triggering api calls on every keypress
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(searchInput);
+      setCurrentPage(1);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   // Form states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -346,11 +356,7 @@ const Medicines = () => {
         </div>
       )}
 
-      {loading ? (
-        <div className="flex items-center justify-center p-12 text-slate-500 dark:text-slate-400 text-sm">
-          Loading catalog database...
-        </div>
-      ) : (
+      <div className="relative">
         <DataTable
           columns={columns}
           data={medicines}
@@ -359,18 +365,17 @@ const Medicines = () => {
           totalRows={totalRows}
           currentPage={currentPage}
           pageSize={pageSize}
-          searchVal={searchQuery}
+          searchVal={searchInput}
           onPageChange={(page) => setCurrentPage(page)}
           onPageSizeChange={(size) => {
             setPageSize(size);
             setCurrentPage(1);
           }}
           onSearchChange={(q) => {
-            setSearchQuery(q);
-            setCurrentPage(1);
+            setSearchInput(q);
           }}
         />
-      )}
+      </div>
 
       {/* Modal form */}
       <Modal

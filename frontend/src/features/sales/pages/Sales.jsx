@@ -10,6 +10,12 @@ const Sales = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
+  // Pagination & Search States
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [pageSize, setPageSize] = useState(25);
+  const [totalRows, setTotalRows] = useState(0);
+
   // Detail Modal states
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [invoiceDetails, setInvoiceDetails] = useState(null);
@@ -17,20 +23,31 @@ const Sales = () => {
 
   useEffect(() => {
     fetchInvoices();
-  }, []);
+  }, [currentPage, searchQuery, pageSize]);
 
   const fetchInvoices = async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getInvoices();
-      setInvoices(data);
+      const response = await getInvoices(currentPage, searchQuery, pageSize);
+      if (response && response.data) {
+        setInvoices(response.data);
+        setTotalRows(response.total || response.data.length);
+      } else {
+        setInvoices(response || []);
+        setTotalRows((response || []).length);
+      }
     } catch (err) {
       console.error(err);
       setError('Failed to fetch sales invoices. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearchChange = (query) => {
+    setSearchQuery(query);
+    setCurrentPage(1);
   };
 
   const handleViewDetails = async (invoice) => {
@@ -135,7 +152,7 @@ const Sales = () => {
         </div>
       )}
 
-      {loading ? (
+      {loading && invoices.length === 0 ? (
         <div className="flex items-center justify-center p-12 text-slate-500 dark:text-slate-400 text-sm">
           Loading sales ledger...
         </div>
@@ -143,6 +160,14 @@ const Sales = () => {
         <DataTable
           columns={columns}
           data={invoices}
+          serverSide={true}
+          totalRows={totalRows}
+          currentPage={currentPage}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          onSearchChange={handleSearchChange}
+          searchVal={searchQuery}
           searchPlaceholder="Search invoices by invoice number or customer name..."
         />
       )}

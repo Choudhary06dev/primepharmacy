@@ -19,6 +19,13 @@ const Purchases = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
+  // Pagination & Search States
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [pageSize, setPageSize] = useState(25);
+  const [totalRows, setTotalRows] = useState(0);
+  const [purchasesLoading, setPurchasesLoading] = useState(true);
+
   // New Purchase Form Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formError, setFormError] = useState(null);
@@ -110,31 +117,54 @@ const Purchases = () => {
   const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
-    fetchInitialData();
+    const loadConfigData = async () => {
+      try {
+        const [supData, unitsData, catsData, compsData] = await Promise.all([
+          getSuppliers(),
+          getUnits(),
+          getCategories(),
+          getCompanies(),
+        ]);
+        setSuppliers(supData);
+        setUnits(unitsData);
+        setCategories(catsData);
+        setCompanies(compsData);
+      } catch (err) {
+        console.error(err);
+        setError('Failed to load purchases configuration database. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadConfigData();
   }, []);
 
-  const fetchInitialData = async () => {
-    setLoading(true);
-    setError(null);
+  useEffect(() => {
+    fetchPurchasesList();
+  }, [currentPage, searchQuery, pageSize]);
+
+  const fetchPurchasesList = async () => {
+    setPurchasesLoading(true);
     try {
-      const [purchData, supData, unitsData, catsData, compsData] = await Promise.all([
-        getPurchases(),
-        getSuppliers(),
-        getUnits(),
-        getCategories(),
-        getCompanies(),
-      ]);
-      setPurchases(purchData);
-      setSuppliers(supData);
-      setUnits(unitsData);
-      setCategories(catsData);
-      setCompanies(compsData);
+      const response = await getPurchases(currentPage, searchQuery, pageSize);
+      if (response && response.data) {
+        setPurchases(response.data);
+        setTotalRows(response.total || response.data.length);
+      } else {
+        setPurchases(response || []);
+        setTotalRows((response || []).length);
+      }
     } catch (err) {
       console.error(err);
-      setError('Failed to load purchases configuration database. Please try again.');
+      setError('Failed to fetch purchases database. Please try again.');
     } finally {
-      setLoading(false);
+      setPurchasesLoading(false);
     }
+  };
+
+  const handleSearchChange = (query) => {
+    setSearchQuery(query);
+    setCurrentPage(1);
   };
 
   // Medicine Selection Change in Form — fetch full details from server
@@ -303,6 +333,7 @@ const Purchases = () => {
     try {
       const created = await createPurchase(payload);
       setPurchases((prev) => [created, ...prev]);
+      setTotalRows((prev) => prev + 1);
       showToast('Purchase registered successfully. Stock inwarded.');
       setIsModalOpen(false);
     } catch (err) {
@@ -434,7 +465,7 @@ const Purchases = () => {
         </div>
       )}
 
-      {loading ? (
+      {purchasesLoading && purchases.length === 0 ? (
         <div className="flex items-center justify-center p-12 text-slate-500 dark:text-slate-400 text-sm">
           Loading purchases database...
         </div>
@@ -442,6 +473,14 @@ const Purchases = () => {
         <DataTable
           columns={columns}
           data={purchases}
+          serverSide={true}
+          totalRows={totalRows}
+          currentPage={currentPage}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          onSearchChange={handleSearchChange}
+          searchVal={searchQuery}
           searchPlaceholder="Search purchases by invoice number or supplier name..."
         />
       )}

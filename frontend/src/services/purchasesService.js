@@ -23,13 +23,44 @@ const getInitialPurchases = () => {
 
 let mockPurchases = getInitialPurchases();
 
-export const getPurchases = async () => {
+export const getPurchases = async (page, search = '', perPage = 25) => {
   if (isMockMode()) {
     await delay(200);
     const pharmacyId = getActivePharmacyId();
-    return mockPurchases.filter((p) => p.pharmacy_id === pharmacyId || p.pharmacy_id === undefined || p.pharmacy_id === null);
+    const filtered = mockPurchases.filter((p) => p.pharmacy_id === pharmacyId || p.pharmacy_id === undefined || p.pharmacy_id === null);
+    
+    const activeSearch = String(search || '').toLowerCase();
+    const searched = activeSearch
+      ? filtered.filter(p => 
+          String(p.purchase_no || '').toLowerCase().includes(activeSearch) || 
+          String(p.supplier?.name || '').toLowerCase().includes(activeSearch)
+        )
+      : filtered;
+
+    if (page !== undefined) {
+      const start = (page - 1) * perPage;
+      const end = start + perPage;
+      return {
+        data: searched.slice(start, end),
+        total: searched.length,
+        current_page: page,
+        per_page: perPage,
+        last_page: Math.ceil(searched.length / perPage)
+      };
+    }
+    return searched;
   }
-  const response = await api.get('/purchases/orders');
+  
+  const params = {};
+  if (page !== undefined) {
+    params.page = page;
+    params.search = search;
+    params.per_page = perPage;
+  } else {
+    params.paginate = 'false';
+  }
+
+  const response = await api.get('/purchases/orders', { params });
   return response.data;
 };
 

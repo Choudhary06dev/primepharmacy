@@ -18,9 +18,27 @@ class PurchaseController extends Controller
     /**
      * Display a listing of purchases.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $purchases = Purchase::with(['supplier'])->latest('id')->get();
+        $query = Purchase::with(['supplier']);
+
+        if ($request->filled('search')) {
+            $search = strtolower($request->query('search'));
+            $query->where(function ($q) use ($search) {
+                $q->whereRaw('LOWER(purchase_no) like ?', ["%{$search}%"])
+                  ->orWhereHas('supplier', function ($qSub) use ($search) {
+                      $qSub->whereRaw('LOWER(name) like ?', ["%{$search}%"]);
+                  });
+            });
+        }
+
+        if ($request->query('paginate') === 'false') {
+            $purchases = $query->latest('id')->get();
+            return response()->json($purchases);
+        }
+
+        $perPage = $request->query('per_page', 25);
+        $purchases = $query->latest('id')->paginate($perPage);
         return response()->json($purchases);
     }
 

@@ -17,44 +17,8 @@ class DashboardController extends Controller
      */
     public function stats()
     {
-        // 1. Today's Sales & growth/decline percentage from yesterday
-        $today = Carbon::today()->toDateString();
-        $yesterday = Carbon::yesterday()->toDateString();
- 
-        $todaySales = (double) Sale::where('sale_date', $today)->sum('grand_total');
-        $yesterdaySales = (double) Sale::where('sale_date', $yesterday)->sum('grand_total');
- 
-        $salesChangePercent = 0;
-        if ($yesterdaySales > 0) {
-            $salesChangePercent = (($todaySales - $yesterdaySales) / $yesterdaySales) * 100;
-        } else if ($todaySales > 0) {
-            $salesChangePercent = 100;
-        }
- 
-        // Formatted sales change string
-        if ($salesChangePercent > 0) {
-            $salesChangeStr = '+' . number_format($salesChangePercent, 1) . '% from yesterday';
-        } elseif ($salesChangePercent < 0) {
-            $salesChangeStr = number_format($salesChangePercent, 1) . '% from yesterday';
-        } else {
-            $salesChangeStr = '0% from yesterday';
-        }
- 
-        // 2. Purchase Orders
-        $totalPurchases = Purchase::count();
-        $thisMonthPurchases = Purchase::whereMonth('purchase_date', Carbon::now()->month)
-            ->whereYear('purchase_date', Carbon::now()->year)
-            ->count();
- 
-        // 3. Active Batches
-        $activeBatches = MedicineBatch::where('status', 'ACTIVE')
-            ->where('remaining_quantity', '>', 0)
-            ->count();
- 
-        // 4. Low Stock Alerts & Critical warnings (Optimized aggregated SQL query)
-        $pharmacyId = app()->bound('tenant.id') ? (int) app('tenant.id') : 0;
-        
-        $branchFilter = '';
+        // Define branch scope target
+        $targetBranchId = null;
         if (auth()->check()) {
             $user = auth()->user();
             $requestedBranchId = request()->query('branch_id');
@@ -63,35 +27,76 @@ class DashboardController extends Controller
                 $userBranch = $user->branch;
                 if ($userBranch && !$userBranch->is_main) {
                     // Sub-branch user: locked to their branch
-                    $branchFilter = " AND medicine_batches.branch_id = " . (int)$user->branch_id;
+                    $targetBranchId = (int)$user->branch_id;
                 } elseif ($requestedBranchId && is_numeric($requestedBranchId)) {
                     // Main branch user with specific branch filter
-                    $branchFilter = " AND medicine_batches.branch_id = " . (int)$requestedBranchId;
+                    $targetBranchId = (int)$requestedBranchId;
                 }
             }
         }
 
+        // 1. Today's Sales & growth/decline percentage from yesterday
+        $today = Carbon::today()->toDateString();
+        $yesterday = Carbon::yesterday()->toDateString();
+
+        $todaySales = (double) Sale::where('sale_date', $today)
+            ->when($targetBranchId, fn($q) => $q->where('branch_id', $targetBranchId))
+            ->sum('grand_total');
+        $yesterdaySales = (double) Sale::where('sale_date', $yesterday)
+            ->when($targetBranchId, fn($q) => $q->where('branch_id', $targetBranchId))
+            ->sum('grand_total');
+
+        $salesChangePercent = 0;
+        if ($yesterdaySales > 0) {
+            $salesChangePercent = (($todaySales - $yesterdaySales) / $yesterdaySales) * 100;
+        } else if ($todaySales > 0) {
+            $salesChangePercent = 100;
+        }
+
+        // Formatted sales change string
+        if ($salesChangePercent > 0) {
+            $salesChangeStr = '+' . number_format($salesChangePercent, 1) . '% from yesterday';
+        } elseif ($salesChangePercent < 0) {
+            $salesChangeStr = number_format($salesChangePercent, 1) . '% from yesterday';
+        } else {
+            $salesChangeStr = '0% from yesterday';
+        }
+
+        // 2. Purchase Orders
+        $totalPurchases = Purchase::when($targetBranchId, fn($q) => $q->where('branch_id', $targetBranchId))->count();
+        $thisMonthPurchases = Purchase::whereMonth('purchase_date', Carbon::now()->month)
+            ->whereYear('purchase_date', Carbon::now()->year)
+            ->when($targetBranchId, fn($q) => $q->where('branch_id', $targetBranchId))
+            ->count();
+
+        // 3. Active Batches
+        $activeBatches = MedicineBatch::where('status', 'ACTIVE')
+            ->where('remaining_quantity', '>', 0)
+            ->when($targetBranchId, fn($q) => $q->where('branch_id', $targetBranchId))
+            ->count();
+
+        // 4. Low Stock Alerts & Critical warnings (Optimized join aggregate subquery)
+        $subquery = MedicineBatch::where('status', 'ACTIVE')
+            ->where('remaining_quantity', '>', 0)
+            ->select('medicine_id')
+            ->selectRaw('SUM(remaining_quantity) as total_remaining')
+            ->groupBy('medicine_id');
+
+        if ($targetBranchId) {
+            $subquery->where('branch_id', $targetBranchId);
+        }
+
         $stockStats = Medicine::where('is_active', true)
+            ->leftJoinSub(
+                $subquery,
+                'mb',
+                'mb.medicine_id',
+                '=',
+                'medicines.id'
+            )
             ->selectRaw("
-                COUNT(CASE WHEN (
-                    SELECT COALESCE(SUM(remaining_quantity), 0)
-                    FROM medicine_batches
-                    WHERE medicine_batches.medicine_id = medicines.id
-                      AND medicine_batches.status = 'ACTIVE'
-                      AND medicine_batches.remaining_quantity > 0
-                      AND medicine_batches.pharmacy_id = {$pharmacyId}
-                      {$branchFilter}
-                ) <= medicines.min_stock_level THEN 1 END) as low_stock_count,
-                
-                COUNT(CASE WHEN (
-                    SELECT COALESCE(SUM(remaining_quantity), 0)
-                    FROM medicine_batches
-                    WHERE medicine_batches.medicine_id = medicines.id
-                      AND medicine_batches.status = 'ACTIVE'
-                      AND medicine_batches.remaining_quantity > 0
-                      AND medicine_batches.pharmacy_id = {$pharmacyId}
-                      {$branchFilter}
-                ) = 0 AND medicines.min_stock_level > 0 THEN 1 END) as critical_warnings
+                COUNT(CASE WHEN COALESCE(mb.total_remaining, 0) <= medicines.min_stock_level THEN 1 END) as low_stock_count,
+                COUNT(CASE WHEN COALESCE(mb.total_remaining, 0) = 0 AND medicines.min_stock_level > 0 THEN 1 END) as critical_warnings
             ")
             ->first();
 
@@ -101,14 +106,16 @@ class DashboardController extends Controller
         // 5. This Month's Sales (MTD)
         $thisMonthSales = (double) Sale::whereMonth('sale_date', Carbon::now()->month)
             ->whereYear('sale_date', Carbon::now()->year)
+            ->when($targetBranchId, fn($q) => $q->where('branch_id', $targetBranchId))
             ->sum('grand_total');
 
         // 6. Expired Batches (FEFO alert)
         $expiredBatches = MedicineBatch::where('status', 'ACTIVE')
             ->where('remaining_quantity', '>', 0)
             ->where('expiry_date', '<', Carbon::now()->toDateString())
+            ->when($targetBranchId, fn($q) => $q->where('branch_id', $targetBranchId))
             ->count();
- 
+
         return response()->json([
             'today_sales' => $todaySales,
             'today_sales_change' => $salesChangeStr,

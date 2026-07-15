@@ -30,18 +30,6 @@ class ReportController extends Controller
         $start = $startDate ? Carbon::parse($startDate)->startOfDay()->toDateTimeString() : null;
         $end = $endDate ? Carbon::parse($endDate)->endOfDay()->toDateTimeString() : null;
 
-        // 1. Sales, Expenses & Profits calculations
-        $salesQuery = Sale::query();
-        $expensesQuery = Expense::query();
-
-        if ($start && $end) {
-            $salesQuery->whereBetween('sale_date', [$start, $end]);
-            $expensesQuery->whereBetween('expense_date', [$start, $end]);
-        }
-
-        $totalSales = (double) $salesQuery->sum('grand_total');
-        $totalExpenses = (double) $expensesQuery->sum('amount');
-
         $authUser = auth()->user();
         $isSubBranch = false;
         $branchId = null;
@@ -61,6 +49,23 @@ class ReportController extends Controller
                 }
             }
         }
+
+        // 1. Sales, Expenses & Profits calculations
+        $salesQuery = Sale::query();
+        $expensesQuery = Expense::query();
+
+        if ($isSubBranch) {
+            $salesQuery->where('branch_id', $branchId);
+            $expensesQuery->where('branch_id', $branchId);
+        }
+
+        if ($start && $end) {
+            $salesQuery->whereBetween('sale_date', [$start, $end]);
+            $expensesQuery->whereBetween('expense_date', [$start, $end]);
+        }
+
+        $totalSales = (double) $salesQuery->sum('grand_total');
+        $totalExpenses = (double) $expensesQuery->sum('amount');
 
         // Cost of Goods Sold (COGS)
         $cogsQuery = DB::table('sale_item_batches')
@@ -93,7 +98,12 @@ class ReportController extends Controller
             $formatExpr = "DATE_FORMAT(sale_date, '%Y-%m')";
         }
 
-        $salesTrend = Sale::where('sale_date', '>=', $sixMonthsAgo->toDateString())
+        $salesTrendQuery = Sale::where('sale_date', '>=', $sixMonthsAgo->toDateString());
+        if ($isSubBranch) {
+            $salesTrendQuery->where('branch_id', $branchId);
+        }
+
+        $salesTrend = $salesTrendQuery
             ->select([
                 DB::raw("{$formatExpr} as month_key"),
                 DB::raw('SUM(grand_total) as total_sales')
@@ -172,15 +182,20 @@ class ReportController extends Controller
                 ];
             });
 
-        // 5. Inventory Valuation (Active stock assets value)
-        $inventoryCostValue = (double) MedicineBatch::where('status', 'ACTIVE')
-            ->where('remaining_quantity', '>', 0)
-            ->sum(DB::raw('remaining_quantity * purchase_price'));
+        // 5. Inventory Valuation (Active stock assets value) (Combined to single query)
+        $inventoryQuery = MedicineBatch::where('status', 'ACTIVE')
+            ->where('remaining_quantity', '>', 0);
 
-        $inventoryRetailValue = (double) MedicineBatch::where('status', 'ACTIVE')
-            ->where('remaining_quantity', '>', 0)
-            ->sum(DB::raw('remaining_quantity * sale_price'));
+        if ($isSubBranch) {
+            $inventoryQuery->where('branch_id', $branchId);
+        }
 
+        $inventoryTotals = $inventoryQuery
+            ->selectRaw('SUM(remaining_quantity * purchase_price) as cost_value, SUM(remaining_quantity * sale_price) as retail_value')
+            ->first();
+
+        $inventoryCostValue = (double) ($inventoryTotals->cost_value ?? 0);
+        $inventoryRetailValue = (double) ($inventoryTotals->retail_value ?? 0);
         $inventoryProfitMargin = $inventoryRetailValue - $inventoryCostValue;
 
         return response()->json([

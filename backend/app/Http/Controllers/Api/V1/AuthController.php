@@ -54,6 +54,7 @@ class AuthController extends Controller
                 'branch_id' => $user->branch_id,
             ],
             'pharmacy' => $result['pharmacy'],
+            'branch' => $result['branch'],
             'access_token' => $token,
             'token_type' => 'Bearer',
         ], 201);
@@ -111,6 +112,7 @@ class AuthController extends Controller
                 'permissions' => $permissions,
             ],
             'pharmacy' => $user->pharmacy,
+            'branch' => $user->branch,
             'access_token' => $token,
             'token_type' => 'Bearer',
         ]);

@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\V1\LedgerController;
 use App\Http\Controllers\Api\V1\CustomerReturnController;
 use App\Http\Controllers\Api\V1\SupplierReturnController;
 use App\Http\Controllers\Api\V1\ReportController;
+use App\Http\Controllers\Api\V1\BranchController;
 
 /*
 |--------------------------------------------------------------------------
@@ -48,9 +49,9 @@ Route::prefix('v1')->group(function () {
         Route::delete('/pharmacies/{pharmacy}', [PharmacyController::class, 'destroy']);
 
         // Users & Roles APIs
-        Route::apiResource('/users', UserController::class);
-        Route::apiResource('/roles', RoleController::class);
-        Route::post('/roles/{roleName}/permissions', [RoleController::class, 'updatePermissions']);
+        Route::apiResource('/users', UserController::class)->middleware('tenant');
+        Route::apiResource('/roles', RoleController::class)->middleware('tenant');
+        Route::post('/roles/{roleId}/permissions', [RoleController::class, 'updatePermissions'])->middleware('tenant');
     });
 
     // Authenticated Tenant-Scoped & Subscription-Gated Routes
@@ -85,6 +86,7 @@ Route::prefix('v1')->group(function () {
         Route::middleware('throttle:api_general')->group(function () {
             Route::apiResource('customers', CustomerController::class);
             Route::apiResource('suppliers', SupplierController::class);
+            Route::apiResource('branches', BranchController::class);
             Route::apiResource('returns/customer', CustomerReturnController::class)->only(['index', 'show', 'store']);
             Route::apiResource('returns/supplier', SupplierReturnController::class)->only(['index', 'show', 'store']);
 

@@ -11,6 +11,7 @@ class Supplier extends TenantModel
 {
     protected $fillable = [
         'pharmacy_id',
+        'branch_id',
         'name',
         'contact_person',
         'phone',

@@ -22,6 +22,7 @@ import Expenses from './features/financials/pages/Expenses';
 import Ledgers from './features/financials/pages/Ledgers';
 import Returns from './features/returns/pages/Returns';
 import Reports from './features/financials/pages/Reports';
+import Branches from './features/settings/pages/Branches';
 
 function App() {
   return (
@@ -46,6 +47,7 @@ function App() {
                     <Route path="/inventory/companies" element={<Companies />} />
                     <Route path="/inventory/units" element={<Units />} />
                     <Route path="/settings/users" element={<Users />} />
+                    <Route path="/settings/branches" element={<Branches />} />
                     {/* Placeholder routes for modules */}
                     <Route path="/inventory/medicines" element={<Medicines />} />
                     <Route path="/inventory/batches" element={<Batches />} />

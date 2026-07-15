@@ -7,6 +7,14 @@ const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [pharmacy, setPharmacy] = useState(null);
+  const [branch, setBranch] = useState(() => {
+    const stored = localStorage.getItem('primepharm_branch');
+    try {
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
   const [token, setToken] = useState(localStorage.getItem('primepharm_token') || null);
   const [loading, setLoading] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -16,6 +24,7 @@ export const AuthProvider = ({ children }) => {
     if (localStorage.getItem('primepharm_auth_mode') === 'mock') {
       localStorage.removeItem('primepharm_token');
       localStorage.removeItem('primepharm_user');
+      localStorage.removeItem('primepharm_branch');
       localStorage.removeItem('primepharm_pharmacy_id');
       localStorage.removeItem('primepharm_auth_mode');
       window.location.reload();
@@ -36,9 +45,17 @@ export const AuthProvider = ({ children }) => {
 
       try {
         const res = await api.get('/auth/me');
-        setUser(res.data.user);
+        const userData = res.data.user;
+        // Ensure permissions is always a plain array (Laravel may serialize as object)
+        if (userData.permissions && !Array.isArray(userData.permissions)) {
+          userData.permissions = Object.values(userData.permissions);
+        }
+        setUser(userData);
         setPharmacy(res.data.pharmacy);
-        localStorage.setItem('primepharm_pharmacy_id', res.data.user.pharmacy_id || '');
+        setBranch(res.data.branch);
+        localStorage.setItem('primepharm_pharmacy_id', userData.pharmacy_id || '');
+        localStorage.setItem('primepharm_user', JSON.stringify(userData));
+        localStorage.setItem('primepharm_branch', JSON.stringify(res.data.branch || null));
       } catch (err) {
         console.error('Failed to fetch user profile:', err);
         logout(true);
@@ -54,15 +71,21 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     try {
       const res = await api.post('/auth/login', { email, password });
-      const { access_token, user: userData, pharmacy: pharmacyData } = res.data;
+      const { access_token, user: userData, pharmacy: pharmacyData, branch: branchData } = res.data;
 
       setToken(access_token);
       setUser(userData);
       setPharmacy(pharmacyData);
+      setBranch(branchData || null);
 
       localStorage.setItem('primepharm_token', access_token);
       localStorage.setItem('primepharm_pharmacy_id', userData.pharmacy_id || '');
+      // Ensure permissions is always a plain array
+      if (userData.permissions && !Array.isArray(userData.permissions)) {
+        userData.permissions = Object.values(userData.permissions);
+      }
       localStorage.setItem('primepharm_user', JSON.stringify(userData));
+      localStorage.setItem('primepharm_branch', JSON.stringify(branchData || null));
       localStorage.removeItem('primepharm_auth_mode');
 
       return res.data;
@@ -77,15 +100,17 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     try {
       const res = await api.post('/auth/register', regData);
-      const { access_token, user: userData, pharmacy: pharmacyData } = res.data;
+      const { access_token, user: userData, pharmacy: pharmacyData, branch: branchData } = res.data;
       
       setToken(access_token);
       setUser(userData);
       setPharmacy(pharmacyData);
+      setBranch(branchData || null);
 
       localStorage.setItem('primepharm_token', access_token);
       localStorage.setItem('primepharm_pharmacy_id', userData.pharmacy_id || '');
       localStorage.setItem('primepharm_user', JSON.stringify(userData));
+      localStorage.setItem('primepharm_branch', JSON.stringify(branchData || null));
 
       return res.data;
     } catch (err) {
@@ -100,9 +125,11 @@ export const AuthProvider = ({ children }) => {
       setToken(null);
       setUser(null);
       setPharmacy(null);
+      setBranch(null);
       localStorage.removeItem('primepharm_token');
       localStorage.removeItem('primepharm_pharmacy_id');
       localStorage.removeItem('primepharm_user');
+      localStorage.removeItem('primepharm_branch');
       localStorage.removeItem('primepharm_auth_mode');
       return;
     }
@@ -120,18 +147,44 @@ export const AuthProvider = ({ children }) => {
       setToken(null);
       setUser(null);
       setPharmacy(null);
+      setBranch(null);
 
       localStorage.removeItem('primepharm_token');
       localStorage.removeItem('primepharm_pharmacy_id');
       localStorage.removeItem('primepharm_user');
+      localStorage.removeItem('primepharm_branch');
       localStorage.removeItem('primepharm_auth_mode');
       
       setIsLoggingOut(false);
+      window.location.href = '/login';
     }, 800);
   };
 
+  /**
+   * Re-fetch the current user's profile and permissions from the backend.
+   * Call this after updating role permissions so the sidebar reflects changes immediately.
+   */
+  const refreshUser = async () => {
+    if (!token) return;
+    try {
+      const res = await api.get('/auth/me');
+      const userData = res.data.user;
+      // Ensure permissions is always a plain array
+      if (userData.permissions && !Array.isArray(userData.permissions)) {
+        userData.permissions = Object.values(userData.permissions);
+      }
+      setUser(userData);
+      setPharmacy(res.data.pharmacy);
+      setBranch(res.data.branch);
+      localStorage.setItem('primepharm_user', JSON.stringify(userData));
+      localStorage.setItem('primepharm_branch', JSON.stringify(res.data.branch || null));
+    } catch (err) {
+      console.error('Failed to refresh user profile:', err);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, pharmacy, token, loading, login, register, logout, isLoggingOut }}>
+    <AuthContext.Provider value={{ user, pharmacy, branch, token, loading, login, register, logout, isLoggingOut, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

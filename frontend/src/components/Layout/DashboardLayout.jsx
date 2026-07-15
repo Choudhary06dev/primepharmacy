@@ -6,7 +6,7 @@ import { getAllowedSidebarPaths, getUserSoftwareRole } from '../../services/user
 import logo from '../../assets/logo.png';
 
 const DashboardLayout = ({ children }) => {
-  const { user, pharmacy, logout, isLoggingOut } = useAuth();
+  const { user, pharmacy, branch, logout, isLoggingOut } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
@@ -15,9 +15,6 @@ const DashboardLayout = ({ children }) => {
 
   // Filter sidebar items based on user's software role permissions
   const navigation = useMemo(() => {
-    const softwareRole = getUserSoftwareRole(user);
-    const allowedPaths = getAllowedSidebarPaths(user);
-
     const allNavigation = [
       { name: 'Dashboard', path: '/', icon: '📊' },
       { name: 'Pharmacies', path: '/admin/pharmacies', icon: '🏥' },
@@ -83,8 +80,10 @@ const DashboardLayout = ({ children }) => {
       },
     ];
 
-    // Super Admin and unknown roles should still see the full navigation.
-    if (allowedPaths === null) return allNavigation;
+    // Super Admin sees the full sidebar navigation at all times
+    if (user?.pharmacy_id === null) return allNavigation;
+
+    const allowedPaths = getAllowedSidebarPaths(user);
 
     // Filter normal items and dropdowns (only keep dropdown if at least one child is allowed)
     return allNavigation.reduce((acc, item) => {
@@ -100,7 +99,7 @@ const DashboardLayout = ({ children }) => {
       }
       return acc;
     }, []);
-  }, [user]);
+  }, [user, pharmacy]);
 
   const handleLogout = () => {
     logout();
@@ -280,12 +279,24 @@ const DashboardLayout = ({ children }) => {
             </button>
             <div className="flex flex-col">
               <span className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: 'var(--color-text-tertiary)' }}>
-                {user?.pharmacy_id === null ? 'System' : 'Pharmacy'}
+                {pharmacy ? (user?.pharmacy_id === null ? 'Pharmacy (Admin View)' : (branch ? `Branch Context` : 'Pharmacy')) : 'System'}
               </span>
-              <span className="text-sm font-bold" style={{ color: 'var(--color-text-primary)' }}>
-                {user?.pharmacy_id === null ? 'Global Admin Panel' : (pharmacy?.name || 'Loading...')}
+              <span className="text-sm font-bold animate-fade-in" style={{ color: 'var(--color-text-primary)' }}>
+                {pharmacy ? (branch ? `${pharmacy.name} (${branch.name})` : pharmacy.name) : 'Global Admin Panel'}
               </span>
             </div>
+            {user?.pharmacy_id === null && pharmacy && (
+              <button
+                onClick={() => {
+                  localStorage.removeItem('primepharm_pharmacy_id');
+                  window.location.href = '/';
+                }}
+                className="ml-2 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-red-500/10 hover:bg-red-500/20 text-red-650 dark:text-red-400 border border-red-500/20 dark:border-red-500/30 transition-all cursor-pointer"
+                title="Exit pharmacy view and return to global admin panel"
+              >
+                Exit View ✕
+              </button>
+            )}
           </div>
 
           <div className="flex items-center gap-3">

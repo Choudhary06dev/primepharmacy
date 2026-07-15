@@ -17,16 +17,11 @@ class RoleController extends Controller
     public function index(Request $request)
     {
         $authUser = $request->user();
-
-        if ($authUser->pharmacy_id === null) {
-            // Super Admin sees all roles
-            $roles = Role::with('permissions')->get();
-        } else {
-            // Tenant sees only their own pharmacy roles (or global ones if config allows)
-            $roles = Role::where('pharmacy_id', $authUser->pharmacy_id)
-                ->with('permissions')
-                ->get();
+        $query = Role::whereNull('pharmacy_id');
+        if ($authUser->pharmacy_id !== null) {
+            $query->where('name', '!=', 'Super Admin');
         }
+        $roles = $query->with('permissions')->get();
 
         $formatted = $roles->map(function ($role) {
             return [
@@ -49,6 +44,11 @@ class RoleController extends Controller
     {
         $authUser = $request->user();
 
+        // Only Super Admin can manage global roles
+        if ($authUser->pharmacy_id !== null) {
+            return response()->json(['message' => 'Unauthorized. Only Super Admin can create roles.'], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'permissions' => 'nullable|array',
@@ -59,27 +59,26 @@ class RoleController extends Controller
         }
 
         $data = $validator->validated();
-        $pharmacyId = $authUser->pharmacy_id;
 
-        // Check duplicates within the same pharmacy
+        // Check duplicates globally
         $exists = Role::where('name', $data['name'])
-            ->where('pharmacy_id', $pharmacyId)
+            ->whereNull('pharmacy_id')
             ->exists();
 
         if ($exists) {
             return response()->json(['message' => 'A role with this name already exists.'], 422);
         }
 
-        $role = Role::create([
+        $role = Role::query()->create([
             'name' => $data['name'],
             'guard_name' => 'web',
-            'pharmacy_id' => $pharmacyId,
+            'pharmacy_id' => null,
         ]);
 
         // Assign permissions if provided
         if (!empty($data['permissions'])) {
             if (config('permission.teams')) {
-                setPermissionsTeamId($pharmacyId);
+                setPermissionsTeamId(null);
             }
             // Ensure permissions exist in database
             foreach ($data['permissions'] as $permName) {
@@ -106,9 +105,9 @@ class RoleController extends Controller
         $authUser = $request->user();
         $role = Role::findOrFail($id);
 
-        // Enforce tenant boundary
-        if ($authUser->pharmacy_id !== null && $role->pharmacy_id !== $authUser->pharmacy_id) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+        // Only Super Admin can manage global roles
+        if ($authUser->pharmacy_id !== null) {
+            return response()->json(['message' => 'Unauthorized. Only Super Admin can edit roles.'], 403);
         }
 
         $validator = Validator::make($request->all(), [
@@ -121,9 +120,9 @@ class RoleController extends Controller
 
         $data = $validator->validated();
 
-        // Check duplicate name within the same pharmacy
+        // Check duplicate name globally
         $exists = Role::where('name', $data['name'])
-            ->where('pharmacy_id', $role->pharmacy_id)
+            ->whereNull('pharmacy_id')
             ->where('id', '!=', $role->id)
             ->exists();
 
@@ -152,9 +151,9 @@ class RoleController extends Controller
         $authUser = $request->user();
         $role = Role::findOrFail($id);
 
-        // Enforce tenant boundary
-        if ($authUser->pharmacy_id !== null && $role->pharmacy_id !== $authUser->pharmacy_id) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+        // Only Super Admin can manage global roles
+        if ($authUser->pharmacy_id !== null) {
+            return response()->json(['message' => 'Unauthorized. Only Super Admin can delete roles.'], 403);
         }
 
         // Prevent deletion of system roles
@@ -170,18 +169,15 @@ class RoleController extends Controller
     /**
      * Sync permissions to a role.
      */
-    public function updatePermissions(Request $request, $roleName)
+    public function updatePermissions(Request $request, $roleId)
     {
         $authUser = $request->user();
-        
-        // Find role by name and pharmacy context
-        $query = Role::where('name', $roleName);
+        $role = Role::findOrFail($roleId);
+
+        // Only Super Admin can update global roles
         if ($authUser->pharmacy_id !== null) {
-            $query->where('pharmacy_id', $authUser->pharmacy_id);
-        } else {
-            $query->whereNull('pharmacy_id');
+            return response()->json(['message' => 'Unauthorized. Only Super Admin can update role permissions.'], 403);
         }
-        $role = $query->firstOrFail();
 
         $validator = Validator::make($request->all(), [
             'permissions' => 'required|array',
@@ -194,7 +190,7 @@ class RoleController extends Controller
         $permissions = $request->permissions;
 
         if (config('permission.teams')) {
-            setPermissionsTeamId($role->pharmacy_id);
+            setPermissionsTeamId(null);
         }
 
         // Ensure permissions exist in DB first
@@ -203,6 +199,9 @@ class RoleController extends Controller
         }
 
         $role->syncPermissions($permissions);
+
+        // Explicitly clear Spatie permission cache so all users get the updated permissions immediately
+        app()->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
 
         return response()->json([
             'id' => $role->id,

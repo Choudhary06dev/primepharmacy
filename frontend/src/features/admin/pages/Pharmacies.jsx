@@ -217,6 +217,15 @@ const Pharmacies = () => {
       label: '',
       render: (_, row) => (
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              localStorage.setItem('primepharm_pharmacy_id', String(row.id));
+              window.location.href = '/';
+            }}
+            className="text-xs font-bold text-emerald-650 dark:text-emerald-400 hover:underline"
+          >
+            View Panel
+          </button>
           <button onClick={() => openEdit(row)} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline">
             Edit
           </button>

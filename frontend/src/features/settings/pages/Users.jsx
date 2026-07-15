@@ -7,12 +7,16 @@ import Select from '../../../components/UI/Select';
 import Modal from '../../../components/UI/Modal';
 import { getUsers, createUser, updateUser, deleteUser, getRoles, createRole, updateRole, deleteRole, getSystemPermissions, updateRolePermissions } from '../../../services/userService';
 import { getPharmacies } from '../../../services/pharmacyService';
+import { getBranches } from '../../../services/branchService';
 import { useAuth } from '../../../context/AuthContext';
 
 const Users = () => {
-  const { user } = useAuth();
+  const { user, pharmacy, refreshUser } = useAuth();
+  const activePharmacyId = user?.pharmacy_id !== null && user?.pharmacy_id !== undefined ? user.pharmacy_id : (pharmacy?.id || null);
   const isSuperAdmin = user?.pharmacy_id === null;
   const [pharmacies, setPharmacies] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [branchOptions, setBranchOptions] = useState([]);
 
   const [activeTab, setActiveTab] = useState('users');
   const [users, setUsers] = useState([]);
@@ -26,7 +30,16 @@ const Users = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
-  const [formData, setFormData] = useState({ name: '', email: '', phone: '', role: 'Operator', designation: '', status: 'Active', password: '', pharmacy_id: 'global' });
+  const [formData, setFormData] = useState({ 
+    name: '', 
+    email: '', 
+    phone: '', 
+    role: 'Operator', 
+    designation: '', 
+    status: 'Active', 
+    password: '', 
+    pharmacy_id: activePharmacyId !== null ? String(activePharmacyId) : 'global' 
+  });
   const [formError, setFormError] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -54,7 +67,7 @@ const Users = () => {
         getSystemPermissions(),
       ]);
 
-      // Fetch pharmacies separately — it uses live API, might fail
+      // Fetch pharmacies and branches separately
       let pharmaciesData = [];
       try {
         pharmaciesData = await getPharmacies();
@@ -63,11 +76,21 @@ const Users = () => {
       }
       setPharmacies(pharmaciesData);
 
+      let branchesData = [];
+      try {
+        branchesData = await getBranches();
+      } catch (err) {
+        console.error('Failed to load branches:', err);
+      }
+      setBranches(branchesData);
+
       const mappedUsers = usersData.map((u) => {
         const pharm = pharmaciesData.find((p) => p.id === u.pharmacy_id);
+        const branch = branchesData.find((b) => b.id === u.branch_id);
         return {
           ...u,
           pharmacy_name: pharm ? pharm.name : (u.pharmacy_id === null ? 'Global (Super Admin)' : 'Unlinked'),
+          branch_name: branch ? branch.name : (u.branch_id ? `Branch ${u.branch_id}` : 'None'),
         };
       });
 
@@ -81,6 +104,28 @@ const Users = () => {
     }
   };
 
+  useEffect(() => {
+    const loadBranchOptions = async () => {
+      const pharmId = formData.pharmacy_id === '' || formData.pharmacy_id === 'global' ? null : Number(formData.pharmacy_id);
+      if (pharmId) {
+        try {
+          const data = await getBranches({ pharmacy_id: pharmId });
+          setBranchOptions(data);
+        } catch (err) {
+          console.error('Failed to load branches for pharmacy:', err);
+        }
+      } else {
+        setBranchOptions([]);
+      }
+    };
+    
+    if (isSuperAdmin) {
+      loadBranchOptions();
+    } else {
+      setBranchOptions(branches);
+    }
+  }, [formData.pharmacy_id, branches, isSuperAdmin]);
+
   const showToast = (msg) => {
     setSuccess(msg);
     setTimeout(() => setSuccess(null), 3000);
@@ -89,11 +134,17 @@ const Users = () => {
   // ─── USER CRUD ──────────────────────────────────────────────
 
   const openCreate = () => {
+    const defaultPharm = activePharmacyId !== null ? String(activePharmacyId) : 'global';
+    const activePharmKey = activePharmacyId !== null ? activePharmacyId : null;
+    const matchedRoles = roles.filter((r) => r.pharmacy_id === activePharmKey);
+    const defaultBranch = !isSuperAdmin && branches.length > 0 ? String(branches[0].id) : '';
+
     setFormData({
       name: '', email: '', phone: '',
-      role: roles.length > 0 ? roles[0]?.name || 'Operator' : 'Operator',
+      role: matchedRoles.length > 0 ? matchedRoles[0]?.name || 'Operator' : 'Operator',
       designation: '', status: 'Active', password: '',
-      pharmacy_id: 'global',
+      pharmacy_id: defaultPharm,
+      branch_id: defaultBranch,
     });
     setFormError(null);
     setIsEditMode(false);
@@ -106,6 +157,7 @@ const Users = () => {
       role: u.role, designation: u.designation || '',
       status: u.status, password: '',
       pharmacy_id: u.pharmacy_id !== null && u.pharmacy_id !== undefined ? String(u.pharmacy_id) : 'global',
+      branch_id: u.branch_id !== null && u.branch_id !== undefined ? String(u.branch_id) : '',
     });
     setFormError(null);
     setCurrentId(u.id);
@@ -121,6 +173,7 @@ const Users = () => {
         const nextPharm = value === 'global' || value === '' || value === undefined ? null : Number(value);
         const matchedRoles = roles.filter((r) => r.pharmacy_id === nextPharm);
         nextData.role = matchedRoles.length > 0 ? matchedRoles[0].name : '';
+        nextData.branch_id = ''; // reset branch context
       }
       return nextData;
     });
@@ -132,13 +185,15 @@ const Users = () => {
     setSaving(true);
     try {
       const pharmId = formData.pharmacy_id === '' || formData.pharmacy_id === 'global' ? null : Number(formData.pharmacy_id);
-      const payload = { ...formData, pharmacy_id: pharmId };
+      const branchId = formData.branch_id === '' ? null : Number(formData.branch_id);
+      const payload = { ...formData, pharmacy_id: pharmId, branch_id: branchId };
 
       if (isEditMode) {
         const updated = await updateUser(currentId, payload);
         const mapped = {
           ...updated,
           pharmacy_name: pharmId ? (pharmacies.find((p) => p.id === pharmId)?.name || '') : 'Global (Super Admin)',
+          branch_name: branchId ? (branchOptions.find((b) => b.id === branchId)?.name || '') : 'None',
         };
         setUsers((prev) => prev.map((u) => (u.id === currentId ? mapped : u)));
         showToast('User updated successfully.');
@@ -148,6 +203,7 @@ const Users = () => {
         const mapped = {
           ...created,
           pharmacy_name: pharmId ? (pharmacies.find((p) => p.id === pharmId)?.name || '') : 'Global (Super Admin)',
+          branch_name: branchId ? (branchOptions.find((b) => b.id === branchId)?.name || '') : 'None',
         };
         setUsers((prev) => [...prev, mapped]);
         showToast('User created successfully.');
@@ -201,8 +257,17 @@ const Users = () => {
     setSaving(true);
     try {
       if (isRoleEditMode) {
+        const oldRole = roles.find((r) => r.id === currentRoleId);
         const updated = await updateRole(currentRoleId, roleFormData);
         setRoles((prev) => prev.map((r) => (r.id === currentRoleId ? updated : r)));
+        
+        // Dynamic sync: Update the role name for all users in local state
+        if (oldRole && oldRole.name !== updated.name) {
+          setUsers((prev) =>
+            prev.map((u) => (u.role === oldRole.name ? { ...u, role: updated.name } : u))
+          );
+        }
+        
         showToast(`Role "${updated.name}" updated.`);
       } else {
         if (!roleFormData.name.trim()) throw new Error('Role name is required.');
@@ -225,6 +290,12 @@ const Users = () => {
       try {
         await deleteRole(role.id);
         setRoles((prev) => prev.filter((r) => r.id !== role.id));
+        
+        // Reset role to 'Viewer' (default) in local state for all users that had this deleted role
+        setUsers((prev) =>
+          prev.map((u) => (u.role === role.name ? { ...u, role: 'Viewer' } : u))
+        );
+        
         showToast(`Role "${role.name}" deleted.`);
       } catch (err) {
         setError(err.message || 'Failed to delete role.');
@@ -249,10 +320,12 @@ const Users = () => {
   const savePermissions = async () => {
     setSaving(true);
     try {
-      const updatedRole = await updateRolePermissions(selectedRole.name, selectedPermissions);
+      const updatedRole = await updateRolePermissions(selectedRole.id, selectedPermissions);
       setRoles((prev) => prev.map((r) => (r.id === selectedRole.id ? updatedRole : r)));
       showToast(`Permissions updated for "${selectedRole.name}".`);
       setIsPermissionsModalOpen(false);
+      // Refresh the current user's permissions so the sidebar updates immediately
+      await refreshUser();
     } catch (err) {
       alert(err.message || 'Failed to save permissions.');
     } finally {
@@ -284,6 +357,11 @@ const Users = () => {
       render: (val) => val || <span className="text-slate-450 dark:text-zinc-500">Global</span>
     }] : []),
     {
+      key: 'branch_name',
+      label: 'Branch',
+      render: (val) => <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>{val || <span className="text-slate-450">—</span>}</span>
+    },
+    {
       key: 'role',
       label: 'Role',
       render: (val) => {
@@ -291,6 +369,7 @@ const Users = () => {
           'Super Admin': 'bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 border-red-100 dark:border-red-900/30',
           'Admin': 'bg-brand-50 dark:bg-brand-950/20 text-brand-700 dark:text-brand-400 border-brand-100 dark:border-brand-900/30',
           'Manager': 'bg-purple-50 dark:bg-purple-950/20 text-purple-700 dark:text-purple-400 border-purple-100 dark:border-purple-900/30',
+          'Pharmacy Operator': 'bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border-amber-100 dark:border-amber-900/30',
           'Operator': 'bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border-amber-100 dark:border-amber-900/30',
           'Viewer': 'bg-slate-50 dark:bg-slate-950/20 text-slate-700 dark:text-slate-400 border-slate-200 dark:border-slate-800/30',
         };
@@ -355,10 +434,14 @@ const Users = () => {
       label: '',
       render: (_, row) => (
         <div className="flex items-center gap-3">
-          <button onClick={() => openPermissions(row)} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline">Permissions</button>
-          <button onClick={() => openEditRole(row)} className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">Edit</button>
-          {!row.is_system && (
-            <button onClick={() => handleDeleteRole(row)} className="text-xs font-bold text-red-600 dark:text-red-400 hover:underline">Delete</button>
+          {isSuperAdmin && (
+            <>
+              <button onClick={() => openPermissions(row)} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline">Permissions</button>
+              <button onClick={() => openEditRole(row)} className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">Edit</button>
+              {!row.is_system && (
+                <button onClick={() => handleDeleteRole(row)} className="text-xs font-bold text-red-600 dark:text-red-400 hover:underline">Delete</button>
+              )}
+            </>
           )}
         </div>
       ),
@@ -367,8 +450,8 @@ const Users = () => {
 
   const permissionCategories = [...new Set(permissionsList.map((p) => p.category))];
 
-  const selectedPharm = formData.pharmacy_id === 'global' || formData.pharmacy_id === '' || formData.pharmacy_id === undefined ? null : Number(formData.pharmacy_id);
-  const filteredRoles = roles.filter((r) => r.pharmacy_id === selectedPharm);
+  // All roles are global, so no filtering by pharmacy_id is needed for roles
+  const filteredRoles = roles;
 
   // ─── RENDER ─────────────────────────────────────────────────
   return (
@@ -384,7 +467,7 @@ const Users = () => {
             </svg>
           }>Add User</Button>
         )}
-        {activeTab === 'roles' && (
+        {activeTab === 'roles' && isSuperAdmin && (
           <Button onClick={openCreateRole} variant="primary" icon={
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -432,7 +515,7 @@ const Users = () => {
       ) : activeTab === 'users' ? (
         <DataTable columns={userColumns} data={users} searchPlaceholder="Search users..." />
       ) : (
-        <DataTable columns={roleColumns} data={roles.filter((r) => r.pharmacy_id === user?.pharmacy_id)} searchPlaceholder="Search roles..." />
+        <DataTable columns={roleColumns} data={roles} searchPlaceholder="Search roles..." />
       )}
 
       {/* ─── User Create/Edit Modal ──────────────────────────────── */}
@@ -525,6 +608,21 @@ const Users = () => {
                   })),
                 ]}
                 emptyOption={false}
+              />
+            )}
+
+            {(formData.pharmacy_id !== 'global' && formData.pharmacy_id !== '') && (
+              <Select
+                label="Assign to Branch"
+                name="branch_id"
+                required
+                value={formData.branch_id}
+                onChange={handleFormChange}
+                options={branchOptions.map((b) => ({
+                  value: String(b.id),
+                  label: b.name + (b.is_main ? ' (Main)' : ''),
+                }))}
+                emptyOption={branchOptions.length === 0 ? 'No branches found for the selected pharmacy' : false}
               />
             )}
 

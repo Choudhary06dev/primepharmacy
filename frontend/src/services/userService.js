@@ -339,9 +339,9 @@ export const deleteRole = async (id) => {
   }
 };
 
-export const updateRolePermissions = async (roleName, permissions) => {
+export const updateRolePermissions = async (roleId, permissions) => {
   try {
-    const response = await api.post(`/roles/${roleName}/permissions`, { permissions });
+    const response = await api.post(`/roles/${roleId}/permissions`, { permissions });
     rolesCache = null;
     return response.data;
   } catch (error) {
@@ -382,8 +382,13 @@ export const getAllowedSidebarPaths = (user) => {
 
   // If user permissions are returned by the backend DB
   if (user.permissions) {
+    // Normalize: Laravel may serialize collections as objects instead of arrays
+    const permsArray = Array.isArray(user.permissions)
+      ? user.permissions
+      : Object.values(user.permissions);
+
     return systemPermissions
-      .filter((p) => user.permissions.includes(p.id))
+      .filter((p) => permsArray.includes(p.id))
       .map((p) => p.sidebarPath);
   }
 
@@ -417,6 +422,7 @@ export const getUserSoftwareRole = (user) => {
     'owner': 'Admin',
     'pharmacist': 'Admin',
     'manager': 'Manager',
+    'pharmacy operator': 'Pharmacy Operator',
     'cashier': 'Operator',
     'stockist': 'Viewer'
   };

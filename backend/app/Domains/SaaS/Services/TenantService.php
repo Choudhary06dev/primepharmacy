@@ -41,29 +41,6 @@ class TenantService
                 'phone' => $data['pharmacy_phone'] ?? null,
             ]);
 
-            // Temporarily set the Spatie Team context to assign the role correctly
-            if (config('permission.teams')) {
-                setPermissionsTeamId((int) $pharmacy->id);
-            }
-
-            // 3. Create Default Tenant Roles in Spatie Permissions (inheriting global permissions)
-            $roleNames = ['Manager', 'Pharmacy Operator'];
-            foreach ($roleNames as $roleName) {
-                $role = Role::query()->firstOrCreate([
-                    'name' => $roleName,
-                    'guard_name' => 'web',
-                    'pharmacy_id' => $pharmacy->id,
-                ]);
-
-                // Copy permissions from the global role of the same name if it exists
-                $globalRole = Role::where('name', $roleName)
-                    ->whereNull('pharmacy_id')
-                    ->first();
-                if ($globalRole) {
-                    $role->syncPermissions($globalRole->permissions()->pluck('name')->toArray());
-                }
-            }
-
             // Pre-seed master Pakistani medicines database for the tenant
             $seeder = new \Database\Seeders\MasterMedicinesSeeder();
             $seeder->runForTenant($pharmacy->id);
@@ -82,6 +59,9 @@ class TenantService
                 ]);
 
                 // 5. Assign Manager Role to the User
+                if (config('permission.teams')) {
+                    setPermissionsTeamId((int) $pharmacy->id);
+                }
                 $user->assignRole('Manager');
             }
 

@@ -20,7 +20,7 @@ class UserController extends Controller
 
         // Super Admin gets all users
         if ($authUser->pharmacy_id === null) {
-            $users = User::latest('id')->get();
+            $users = User::withoutGlobalScope(TenantScope::class)->latest('id')->get();
         } else {
             // Tenant gets only their own pharmacy users
             $users = User::where('pharmacy_id', $authUser->pharmacy_id)
@@ -70,6 +70,7 @@ class UserController extends Controller
             'phone' => 'nullable|string|max:30',
             'status' => 'required|string|in:Active,Inactive',
             'role' => 'required|string',
+            'branch_id' => 'nullable|integer',
         ];
 
         // Only Super Admin can assign a custom pharmacy_id
@@ -97,7 +98,7 @@ class UserController extends Controller
             'phone' => $data['phone'] ?? null,
             'status' => strtolower($data['status']) === 'active' ? 'active' : 'inactive',
             'pharmacy_id' => $pharmacyId,
-            'branch_id' => $authUser->branch_id, // Default to same branch context
+            'branch_id' => $data['branch_id'] ?? ($authUser->branch_id ?: (\App\Models\Branch::where('pharmacy_id', $pharmacyId)->first()?->id ?? null)),
         ]);
 
         $roleName = $data['role'];
@@ -171,6 +172,7 @@ class UserController extends Controller
             'phone' => 'nullable|string|max:30',
             'status' => 'required|string|in:Active,Inactive',
             'role' => 'required|string',
+            'branch_id' => 'nullable|integer',
         ];
 
         if ($authUser->pharmacy_id === null) {
@@ -190,6 +192,7 @@ class UserController extends Controller
         $user->email = $data['email'];
         $user->phone = $data['phone'] ?? null;
         $user->status = strtolower($data['status']) === 'active' ? 'active' : 'inactive';
+        $user->branch_id = array_key_exists('branch_id', $data) ? $data['branch_id'] : $user->branch_id;
 
         if (!empty($data['password'])) {
             $user->password = Hash::make($data['password']);

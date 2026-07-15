@@ -23,7 +23,7 @@ class IdentifyTenant
             if ($pharmacyId === null) {
                 $pharmacyId = $request->query('pharmacy_id')
                     ?: $request->header('X-Pharmacy-ID')
-                    ?: (\App\Models\Pharmacy::first()?->id ?: 1);
+                    ?: null;
             }
         }
         // 2. Fallback to request header (useful for debug or webhook routes)

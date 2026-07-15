@@ -42,12 +42,28 @@ class ReportController extends Controller
         $totalSales = (double) $salesQuery->sum('grand_total');
         $totalExpenses = (double) $expensesQuery->sum('amount');
 
+        $authUser = auth()->user();
+        $isSubBranch = false;
+        $branchId = null;
+
+        if ($authUser && $authUser->pharmacy_id !== null && $authUser->branch_id !== null) {
+            $userBranch = $authUser->branch;
+            if ($userBranch && !$userBranch->is_main) {
+                $isSubBranch = true;
+                $branchId = (int)$authUser->branch_id;
+            }
+        }
+
         // Cost of Goods Sold (COGS)
         $cogsQuery = DB::table('sale_item_batches')
             ->join('medicine_batches', 'sale_item_batches.batch_id', '=', 'medicine_batches.id')
             ->join('sale_items', 'sale_item_batches.sale_item_id', '=', 'sale_items.id')
             ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
             ->where('sale_item_batches.pharmacy_id', $pharmacyId);
+
+        if ($isSubBranch) {
+            $cogsQuery->where('sales.branch_id', $branchId);
+        }
 
         if ($start && $end) {
             $cogsQuery->whereBetween('sales.sale_date', [$start, $end]);
@@ -95,6 +111,10 @@ class ReportController extends Controller
             ->join('expense_categories', 'expenses.expense_category_id', '=', 'expense_categories.id')
             ->where('expenses.pharmacy_id', $pharmacyId);
 
+        if ($isSubBranch) {
+            $expenseBreakdownQuery->where('expenses.branch_id', $branchId);
+        }
+
         if ($start && $end) {
             $expenseBreakdownQuery->whereBetween('expenses.expense_date', [$start, $end]);
         }
@@ -115,6 +135,10 @@ class ReportController extends Controller
             ->join('medicines', 'sale_items.medicine_id', '=', 'medicines.id')
             ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
             ->where('sale_items.pharmacy_id', $pharmacyId);
+
+        if ($isSubBranch) {
+            $topMedicinesQuery->where('sales.branch_id', $branchId);
+        }
 
         if ($start && $end) {
             $topMedicinesQuery->whereBetween('sales.sale_date', [$start, $end]);

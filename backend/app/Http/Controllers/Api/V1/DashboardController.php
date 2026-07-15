@@ -53,6 +53,17 @@ class DashboardController extends Controller
  
         // 4. Low Stock Alerts & Critical warnings (Optimized aggregated SQL query)
         $pharmacyId = app()->bound('tenant.id') ? (int) app('tenant.id') : 0;
+        
+        $branchFilter = '';
+        if (auth()->check()) {
+            $user = auth()->user();
+            if ($user->pharmacy_id !== null && $user->branch_id !== null) {
+                $userBranch = $user->branch;
+                if ($userBranch && !$userBranch->is_main) {
+                    $branchFilter = " AND medicine_batches.branch_id = " . (int)$user->branch_id;
+                }
+            }
+        }
 
         $stockStats = Medicine::where('is_active', true)
             ->selectRaw("
@@ -63,6 +74,7 @@ class DashboardController extends Controller
                       AND medicine_batches.status = 'ACTIVE'
                       AND medicine_batches.remaining_quantity > 0
                       AND medicine_batches.pharmacy_id = {$pharmacyId}
+                      {$branchFilter}
                 ) <= medicines.min_stock_level THEN 1 END) as low_stock_count,
                 
                 COUNT(CASE WHEN (
@@ -72,6 +84,7 @@ class DashboardController extends Controller
                       AND medicine_batches.status = 'ACTIVE'
                       AND medicine_batches.remaining_quantity > 0
                       AND medicine_batches.pharmacy_id = {$pharmacyId}
+                      {$branchFilter}
                 ) = 0 AND medicines.min_stock_level > 0 THEN 1 END) as critical_warnings
             ")
             ->first();

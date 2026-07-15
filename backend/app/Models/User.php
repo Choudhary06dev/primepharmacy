@@ -62,4 +62,18 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Branch::class);
     }
+
+    /**
+     * Resolve route binding bypassing TenantScope for Super Admins.
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        if (auth()->check() && auth()->user()->pharmacy_id === null) {
+            return $this->where($field ?? $this->getRouteKeyName(), $value)
+                ->withoutGlobalScope(\App\Scopes\TenantScope::class)
+                ->firstOrFail();
+        }
+
+        return parent::resolveRouteBinding($value, $field);
+    }
 }

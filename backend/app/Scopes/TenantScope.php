@@ -14,15 +14,37 @@ use Illuminate\Database\Eloquent\Scope;
  */
 class TenantScope implements Scope
 {
-    /**
-     * Apply the scope to a given Eloquent query builder.
-     */
     public function apply(Builder $builder, Model $model): void
     {
-        $pharmacyId = app()->bound('tenant.id') ? app('tenant.id') : null;
+        $pharmacyId = null;
 
-        if ($pharmacyId) {
+        // 1. Resolve pharmacy ID context
+        if (app()->bound('tenant.id')) {
+            $pharmacyId = app('tenant.id');
+        } elseif (auth()->check()) {
+            $pharmacyId = auth()->user()->pharmacy_id;
+        }
+
+        if ($pharmacyId !== null) {
             $builder->where($model->getTable() . '.pharmacy_id', $pharmacyId);
+        } else {
+            // Super Admin in global panel
+            if (auth()->check()) {
+                if (!($model instanceof \App\Models\User || $model instanceof \Spatie\Permission\Models\Role || $model instanceof \App\Models\Branch)) {
+                    $builder->where($model->getTable() . '.pharmacy_id', -1);
+                }
+            }
+        }
+
+        // 2. Branch Isolation: If user is logged in and belongs to a sub-branch, restrict queries to that branch only
+        if (auth()->check()) {
+            $user = auth()->user();
+            if ($user->pharmacy_id !== null && $user->branch_id !== null && in_array('branch_id', $model->getFillable())) {
+                $userBranch = $user->branch;
+                if ($userBranch && !$userBranch->is_main) {
+                    $builder->where($model->getTable() . '.branch_id', $user->branch_id);
+                }
+            }
         }
     }
 }

@@ -24,27 +24,36 @@ class SupplierController extends Controller
      */
     public function store(Request $request)
     {
+        $authUser = $request->user();
         $validator = Validator::make($request->all(), [
             'name' => [
                 'required',
                 'string',
                 'max:100',
-                Rule::unique('suppliers')->where(function ($query) {
-                    return $query->where('pharmacy_id', auth()->user()->pharmacy_id);
+                Rule::unique('suppliers')->where(function ($query) use ($authUser) {
+                    return $query->where('pharmacy_id', $authUser->pharmacy_id);
                 })
             ],
             'contact_person' => 'nullable|string|max:100',
             'phone' => 'nullable|string|max:30',
             'email' => 'nullable|string|email|max:255',
             'address' => 'nullable|string',
+            'branch_id' => 'nullable|integer',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        $data = $validator->validated();
+
         $supplier = Supplier::create([
-            ...$validator->validated(),
+            'name' => $data['name'],
+            'contact_person' => $data['contact_person'] ?? null,
+            'phone' => $data['phone'] ?? null,
+            'email' => $data['email'] ?? null,
+            'address' => $data['address'] ?? null,
+            'branch_id' => $data['branch_id'] ?? ($authUser ? $authUser->branch_id : null),
             'balance' => 0.00,
         ]);
 
@@ -64,19 +73,21 @@ class SupplierController extends Controller
      */
     public function update(Request $request, Supplier $supplier)
     {
+        $authUser = $request->user();
         $validator = Validator::make($request->all(), [
             'name' => [
                 'required',
                 'string',
                 'max:100',
-                Rule::unique('suppliers')->where(function ($query) {
-                    return $query->where('pharmacy_id', auth()->user()->pharmacy_id);
+                Rule::unique('suppliers')->where(function ($query) use ($authUser) {
+                    return $query->where('pharmacy_id', $authUser->pharmacy_id);
                 })->ignore($supplier->id)
             ],
             'contact_person' => 'nullable|string|max:100',
             'phone' => 'nullable|string|max:30',
             'email' => 'nullable|string|email|max:255',
             'address' => 'nullable|string',
+            'branch_id' => 'nullable|integer',
         ]);
 
         if ($validator->fails()) {

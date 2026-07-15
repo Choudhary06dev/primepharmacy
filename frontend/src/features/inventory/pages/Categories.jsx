@@ -132,7 +132,15 @@ const Categories = () => {
     {
       key: 'created_at',
       label: 'Created At',
-      render: (val) => <span className="font-mono text-xs" style={{ color: 'var(--color-text-secondary)' }}>{val}</span>,
+      render: (val) => {
+        if (val && typeof val === 'string' && val.includes('T')) {
+          const parts = val.split('T');
+          const dPart = parts[0];
+          const tPart = parts[1]?.slice(0, 5);
+          val = `${dPart} ${tPart || ''}`.trim();
+        }
+        return <span className="font-mono text-xs" style={{ color: 'var(--color-text-secondary)' }}>{val}</span>;
+      },
     },
     {
       key: 'actions',

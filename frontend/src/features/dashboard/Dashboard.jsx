@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useBranchFilter } from '../../context/BranchFilterContext';
 import { useNavigate } from 'react-router-dom';
 import { getDashboardStats, getInvoices, getCustomers } from '../../services/salesService';
 import { getReportsSummary } from '../../services/reportsService';
@@ -47,6 +48,7 @@ const formatYAxisVal = (val) => {
 /* ═══════════════════════════ DASHBOARD COMPONENT ═══════════════════════ */
 const Dashboard = () => {
   const { user, pharmacy } = useAuth();
+  const { selectedBranchId, selectedBranchName, isMainBranch } = useBranchFilter();
   const navigate = useNavigate();
   const isSuperAdmin = user?.pharmacy_id === null || user?.roles?.[0]?.toLowerCase() === 'super admin';
 
@@ -108,6 +110,7 @@ const Dashboard = () => {
   /* ── Fetch all data in parallel ── */
   useEffect(() => {
     let active = true;
+    setLoading(true);
     const load = async () => {
       try {
         const [stats, reports, invoices, customers, suppliers] = await Promise.allSettled([
@@ -155,7 +158,7 @@ const Dashboard = () => {
     };
     load();
     return () => { active = false; };
-  }, []);
+  }, [selectedBranchId]);
 
   /* ── Animated counter values ── */
   const animatedTodaySales = useCountUp(Math.round(Number(statsData?.today_sales ?? 0)), 1600, !loading);

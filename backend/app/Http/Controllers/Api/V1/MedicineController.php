@@ -16,16 +16,38 @@ class MedicineController extends Controller
      */
     public function index(Request $request)
     {
+        // Resolve the active branch ID context
+        $branchId = null;
+        if (auth()->check()) {
+            $user = auth()->user();
+            if ($user->pharmacy_id !== null && $user->branch_id !== null) {
+                $userBranch = $user->branch;
+                if ($userBranch && !$userBranch->is_main) {
+                    // Sub-branch user: locked to their own branch
+                    $branchId = $user->branch_id;
+                } else {
+                    // Main branch user: allow optional ?branch_id filter
+                    $requestedBranchId = $request->query('branch_id');
+                    if ($requestedBranchId && is_numeric($requestedBranchId)) {
+                        $branchId = (int) $requestedBranchId;
+                    }
+                }
+            }
+        }
+
         // Return highly optimized lightweight list for dropdowns/selectors
         if ($request->query('simple') === 'true' || $request->boolean('simple')) {
             $pharmacyId = app()->bound('tenant.id') ? app('tenant.id') : null;
             
             $query = DB::table('medicines')
                 ->leftJoin('units', 'medicines.base_unit_id', '=', 'units.id')
-                ->leftJoin('medicine_batches', function ($join) {
+                ->leftJoin('medicine_batches', function ($join) use ($branchId) {
                     $join->on('medicines.id', '=', 'medicine_batches.medicine_id')
                          ->where('medicine_batches.status', '=', 'ACTIVE')
                          ->where('medicine_batches.remaining_quantity', '>', 0);
+                    if ($branchId) {
+                        $join->where('medicine_batches.branch_id', '=', $branchId);
+                    }
                 })
                 ->select([
                     'medicines.id',

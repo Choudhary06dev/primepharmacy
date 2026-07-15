@@ -623,12 +623,16 @@ const Pos = () => {
             </div>
 
             {/* Invoice Metadata in Side-by-Side rows */}
-            <div className="border-t border-b border-dashed border-slate-300 py-1.5 text-xs space-y-0.5">
+            <div className="border-t border-b border-dashed border-slate-300 py-1.5 text-xs space-y-1">
               <div className="flex justify-between">
-                <span>Invoice: <strong>{checkoutResult.invoice_no}</strong></span>
-                <span>Date: {checkoutResult.sale_date}</span>
+                <span className="text-slate-500">Invoice:</span>
+                <span className="font-bold font-mono">{checkoutResult.invoice_no}</span>
               </div>
-              <div className="flex justify-between text-[11px] text-slate-600">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Date:</span>
+                <span className="font-mono">{checkoutResult.sale_date ? checkoutResult.sale_date.split('T')[0] : ''}</span>
+              </div>
+              <div className="flex justify-between text-[11px] text-slate-600 pt-0.5">
                 <span>Cashier: {user?.name || 'Operator'}</span>
                 <span>Cust: {checkoutResult.customer?.name || 'Walk-in'}</span>
               </div>

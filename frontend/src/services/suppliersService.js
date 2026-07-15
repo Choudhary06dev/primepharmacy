@@ -1,4 +1,4 @@
-import api from './api';
+import api, { registerCacheInvalidator } from './api';
 
 const STORAGE_KEY = 'primepharm_mock_suppliers';
 
@@ -27,7 +27,7 @@ const saveSuppliers = () => {
 };
 
 let suppliersCache = null;
-
+registerCacheInvalidator(() => { suppliersCache = null; });
 export const getSuppliers = async () => {
   if (isMockMode()) {
     await delay(200);

@@ -1,4 +1,4 @@
-import api from './api';
+import api, { registerCacheInvalidator } from './api';
 import { getInitialMedicines } from './inventoryService';
 
 const STORAGE_SALES_KEY = 'primepharm_mock_sales';
@@ -57,7 +57,7 @@ const saveCustomers = () => { localStorage.setItem(STORAGE_CUSTOMERS_KEY, JSON.s
 // ─── CUSTOMERS MANAGEMENT ───────────────────────────────────────────────
 
 let customersCache = null;
-
+registerCacheInvalidator(() => { customersCache = null; });
 export const getCustomers = async () => {
   if (isMockMode()) {
     await delay(150);

@@ -1,13 +1,16 @@
 import { useState, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useBranchFilter } from '../../context/BranchFilterContext';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getAllowedSidebarPaths, getUserSoftwareRole } from '../../services/userService';
+import BranchSelector from '../BranchSelector/BranchSelector';
 import logo from '../../assets/logo.png';
 
 const DashboardLayout = ({ children }) => {
   const { user, pharmacy, branch, logout, isLoggingOut } = useAuth();
   const { isDark, toggleTheme } = useTheme();
+  const { selectedBranchId, selectedBranchName, hasMultipleBranches } = useBranchFilter();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -278,11 +281,20 @@ const DashboardLayout = ({ children }) => {
               ☰
             </button>
             <div className="flex flex-col">
-              <span className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: 'var(--color-text-tertiary)' }}>
-                {pharmacy ? (user?.pharmacy_id === null ? 'Pharmacy (Admin View)' : (branch ? `Branch Context` : 'Pharmacy')) : 'System'}
+              <span className="text-[9px] uppercase tracking-widest font-bold text-brand-600 dark:text-brand-400" style={{ lineHeight: '1.2' }}>
+                {pharmacy ? (user?.pharmacy_id === null ? 'System (Admin View)' : pharmacy.name) : 'System'}
               </span>
-              <span className="text-sm font-bold animate-fade-in" style={{ color: 'var(--color-text-primary)' }}>
-                {pharmacy ? (branch ? `${pharmacy.name} (${branch.name})` : pharmacy.name) : 'Global Admin Panel'}
+              <span className="text-[13px] font-bold animate-fade-in flex items-center gap-1.5 mt-0.5" style={{ color: 'var(--color-text-primary)', lineHeight: '1.2' }}>
+                {pharmacy ? (
+                  <>
+                    <span className="text-xs">📍</span>
+                    <span>
+                      {selectedBranchId 
+                        ? selectedBranchName 
+                        : (hasMultipleBranches ? 'All Branches (Consolidated)' : (branch?.name || 'Main Branch'))}
+                    </span>
+                  </>
+                ) : 'Global Admin Panel'}
               </span>
             </div>
             {user?.pharmacy_id === null && pharmacy && (
@@ -297,6 +309,9 @@ const DashboardLayout = ({ children }) => {
                 Exit View ✕
               </button>
             )}
+
+            {/* Branch Selector — Visible only for main branch managers */}
+            <BranchSelector />
           </div>
 
           <div className="flex items-center gap-3">
@@ -361,7 +376,7 @@ const DashboardLayout = ({ children }) => {
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto p-6" style={{ backgroundColor: 'var(--color-surface-secondary)' }}>
-          <div key={location.pathname} className="page-animate">
+          <div key={`${location.pathname}-branch-${selectedBranchId || 'all'}`} className="page-animate">
             {children}
           </div>
         </main>

@@ -838,7 +838,7 @@ const Purchases = () => {
                       <tr key={item.id}>
                         <td className="px-4 py-2.5">{item.medicine?.name}</td>
                         <td className="px-4 py-2.5 font-mono text-[10px]">{item.batch_no}</td>
-                        <td className="px-4 py-2.5 font-mono text-[10px]">{item.expiry_date}</td>
+                        <td className="px-4 py-2.5 font-mono text-[10px]">{item.expiry_date ? item.expiry_date.split('T')[0] : ''}</td>
                         <td className="px-4 py-2.5 text-right font-mono">{item.quantity} {item.unit?.abbreviation || 'Units'}</td>
                         <td className="px-4 py-2.5 text-right font-mono text-slate-500">PKR {Number(item.unit_price).toFixed(2)}</td>
                         <td className="px-4 py-2.5 text-right font-mono">PKR {(item.quantity * item.unit_price).toFixed(2)}</td>

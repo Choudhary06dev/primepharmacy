@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { BranchFilterProvider } from './context/BranchFilterContext';
 import { ThemeProvider } from './context/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import DashboardLayout from './components/Layout/DashboardLayout';
@@ -39,6 +40,7 @@ function App() {
             path="/*"
             element={
               <ProtectedRoute>
+                <BranchFilterProvider>
                 <DashboardLayout>
                   <Routes>
                     <Route path="/" element={<Dashboard />} />
@@ -64,6 +66,7 @@ function App() {
                     <Route path="/returns/supplier" element={<Returns />} />
                   </Routes>
                 </DashboardLayout>
+                </BranchFilterProvider>
               </ProtectedRoute>
             }
           />

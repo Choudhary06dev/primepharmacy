@@ -186,9 +186,9 @@ class PurchaseController extends Controller
     /**
      * Display the specified purchase details.
      */
-    public function show(Purchase $purchase)
+    public function show(Purchase $order)
     {
-        $purchase->load(['supplier', 'items.medicine.baseUnit', 'items.unit']);
-        return response()->json($purchase);
+        $order->load(['supplier', 'items.medicine.baseUnit', 'items.unit']);
+        return response()->json($order);
     }
 }

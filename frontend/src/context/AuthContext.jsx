@@ -131,6 +131,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('primepharm_user');
       localStorage.removeItem('primepharm_branch');
       localStorage.removeItem('primepharm_auth_mode');
+      localStorage.removeItem('primepharm_branch_filter');
       return;
     }
 
@@ -154,6 +155,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('primepharm_user');
       localStorage.removeItem('primepharm_branch');
       localStorage.removeItem('primepharm_auth_mode');
+      localStorage.removeItem('primepharm_branch_filter');
       
       setIsLoggingOut(false);
       window.location.href = '/login';

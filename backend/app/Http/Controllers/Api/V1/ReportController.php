@@ -49,8 +49,16 @@ class ReportController extends Controller
         if ($authUser && $authUser->pharmacy_id !== null && $authUser->branch_id !== null) {
             $userBranch = $authUser->branch;
             if ($userBranch && !$userBranch->is_main) {
+                // Sub-branch user: locked to their branch
                 $isSubBranch = true;
                 $branchId = (int)$authUser->branch_id;
+            } else {
+                // Main branch user: allow optional ?branch_id filter
+                $requestedBranchId = $request->query('branch_id');
+                if ($requestedBranchId && is_numeric($requestedBranchId)) {
+                    $isSubBranch = true;
+                    $branchId = (int)$requestedBranchId;
+                }
             }
         }
 

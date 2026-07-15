@@ -8,7 +8,12 @@ const api = axios.create({
   },
 });
 
-// Request interceptor to attach bearer tokens automatically
+// Global service cache invalidation registry
+const cacheInvalidators = [];
+export const registerCacheInvalidator = (fn) => { cacheInvalidators.push(fn); };
+export const clearAllServiceCaches = () => { cacheInvalidators.forEach(fn => fn()); };
+
+// Request interceptor to attach bearer tokens and branch filter automatically
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('primepharm_token');
@@ -19,6 +24,19 @@ api.interceptors.request.use(
     const pharmacyId = localStorage.getItem('primepharm_pharmacy_id');
     if (pharmacyId) {
       config.headers['X-Pharmacy-ID'] = pharmacyId;
+    }
+
+    // Auto-inject branch_id filter for cross-branch viewing (set by BranchSelector)
+    const isGetRequest = config.method && config.method.toLowerCase() === 'get';
+    if (isGetRequest) {
+      const branchFilterId = localStorage.getItem('primepharm_branch_filter');
+      if (branchFilterId && branchFilterId !== 'all') {
+        config.params = config.params || {};
+        // Only inject if not already explicitly set by the caller
+        if (!config.params.branch_id) {
+          config.params.branch_id = branchFilterId;
+        }
+      }
     }
 
     return config;

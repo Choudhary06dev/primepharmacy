@@ -19,7 +19,7 @@ class TenantScope implements Scope
         $pharmacyId = null;
 
         // 1. Resolve pharmacy ID context
-        if (app()->bound('tenant.id')) {
+        if (app()->bound('tenant.id') && app('tenant.id') !== null) {
             $pharmacyId = app('tenant.id');
         } elseif (auth()->check()) {
             $pharmacyId = auth()->user()->pharmacy_id;
@@ -36,13 +36,20 @@ class TenantScope implements Scope
             }
         }
 
-        // 2. Branch Isolation: If user is logged in and belongs to a sub-branch, restrict queries to that branch only
-        if (auth()->check()) {
+        // 2. Branch Isolation
+        if (auth()->check() && in_array('branch_id', $model->getFillable())) {
             $user = auth()->user();
-            if ($user->pharmacy_id !== null && $user->branch_id !== null && in_array('branch_id', $model->getFillable())) {
+            if ($user->pharmacy_id !== null && $user->branch_id !== null) {
                 $userBranch = $user->branch;
                 if ($userBranch && !$userBranch->is_main) {
+                    // Sub-branch user: always restricted to their own branch
                     $builder->where($model->getTable() . '.branch_id', $user->branch_id);
+                } else {
+                    // Main branch user: allow optional ?branch_id filter for cross-branch viewing
+                    $requestedBranchId = request()?->query('branch_id');
+                    if ($requestedBranchId && is_numeric($requestedBranchId)) {
+                        $builder->where($model->getTable() . '.branch_id', (int) $requestedBranchId);
+                    }
                 }
             }
         }

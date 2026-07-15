@@ -57,10 +57,16 @@ class DashboardController extends Controller
         $branchFilter = '';
         if (auth()->check()) {
             $user = auth()->user();
+            $requestedBranchId = request()->query('branch_id');
+
             if ($user->pharmacy_id !== null && $user->branch_id !== null) {
                 $userBranch = $user->branch;
                 if ($userBranch && !$userBranch->is_main) {
+                    // Sub-branch user: locked to their branch
                     $branchFilter = " AND medicine_batches.branch_id = " . (int)$user->branch_id;
+                } elseif ($requestedBranchId && is_numeric($requestedBranchId)) {
+                    // Main branch user with specific branch filter
+                    $branchFilter = " AND medicine_batches.branch_id = " . (int)$requestedBranchId;
                 }
             }
         }

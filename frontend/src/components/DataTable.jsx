@@ -137,11 +137,23 @@ const DataTable = ({
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
-                  {columns.map((col) => (
-                    <td key={col.key} className="px-5 py-2" style={{ color: 'var(--color-text-primary)' }}>
-                      {col.render ? col.render(row[col.key], row) : row[col.key]}
-                    </td>
-                  ))}
+                  {columns.map((col) => {
+                    const val = row[col.key];
+                    let displayVal = val;
+                    if (!col.render && val && typeof val === 'string' && (col.key.endsWith('_at') || col.key.endsWith('_date'))) {
+                      if (val.includes('T')) {
+                        const parts = val.split('T');
+                        const dPart = parts[0];
+                        const tPart = parts[1]?.slice(0, 5);
+                        displayVal = `${dPart} ${tPart || ''}`.trim();
+                      }
+                    }
+                    return (
+                      <td key={col.key} className="px-5 py-2" style={{ color: 'var(--color-text-primary)' }}>
+                        {col.render ? col.render(val, row) : displayVal}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))
             )}

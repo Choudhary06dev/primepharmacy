@@ -6,7 +6,7 @@ import logo from '../../assets/logo.png';
 const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -17,7 +17,7 @@ const Login = () => {
     setError(null);
     setSubmitting(true);
     try {
-      await login(email, password);
+      await login(username, password);
       navigate('/');
     } catch (err) {
       console.error(err);
@@ -47,15 +47,15 @@ const Login = () => {
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-              Email Address
+              Username
             </label>
             <input
-              type="email"
+              type="text"
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               className="w-full rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 px-4 py-3.5 text-sm text-slate-850 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all duration-200"
-              placeholder="e.g. owner@pharmacy.com"
+              placeholder="e.g. owner_username"
             />
           </div>
 
@@ -99,13 +99,6 @@ const Login = () => {
             {submitting ? 'Authenticating...' : 'Sign In'}
           </button>
         </form>
-
-        <p className="mt-8 text-center text-xs text-slate-500 dark:text-slate-400">
-          New to PrimePharm?{' '}
-          <Link to="/register" className="font-bold text-brand-650 dark:text-brand-400 hover:underline">
-            Register your Pharmacy
-          </Link>
-        </p>
       </div>
     </div>
   );

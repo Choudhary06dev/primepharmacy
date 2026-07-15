@@ -48,11 +48,25 @@ class TenantService
             // 4. Create User (Owner) conditionally
             $user = null;
             if (!empty($data['email'])) {
+                $emailPrefix = explode('@', $data['email'])[0];
+                $username = strtolower(preg_replace('/[^a-zA-Z0-9_.]/', '', $emailPrefix));
+                if (empty($username)) {
+                    $username = 'owner_' . Str::random(5);
+                }
+                
+                $original = $username;
+                $counter = 1;
+                while (User::where('username', $username)->exists()) {
+                    $username = $original . $counter;
+                    $counter++;
+                }
+
                 $user = User::create([
                     'pharmacy_id' => $pharmacy->id,
                     'branch_id' => $branch->id,
                     'name' => $data['name'] ?? 'Owner',
                     'email' => $data['email'],
+                    'username' => $username,
                     'password' => Hash::make($data['password']),
                     'phone' => $data['phone'] ?? null,
                     'status' => 'active',

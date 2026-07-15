@@ -39,6 +39,7 @@ class UserController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'username' => $user->username,
                 'phone' => $user->phone,
                 'status' => $user->status === 'active' ? 'Active' : 'Inactive',
                 'pharmacy_id' => $user->pharmacy_id,
@@ -66,6 +67,7 @@ class UserController extends Controller
         $rules = [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email',
+            'username' => 'required|string|max:255|unique:users,username',
             'password' => 'required|string|min:8',
             'phone' => 'nullable|string|max:30',
             'status' => 'required|string|in:Active,Inactive',
@@ -94,6 +96,7 @@ class UserController extends Controller
         $user = User::create([
             'name' => $data['name'],
             'email' => $data['email'],
+            'username' => $data['username'],
             'password' => Hash::make($data['password']),
             'phone' => $data['phone'] ?? null,
             'status' => strtolower($data['status']) === 'active' ? 'active' : 'inactive',
@@ -138,6 +141,7 @@ class UserController extends Controller
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
+            'username' => $user->username,
             'phone' => $user->phone,
             'status' => $user->status === 'active' ? 'Active' : 'Inactive',
             'pharmacy_id' => $user->pharmacy_id,
@@ -168,6 +172,7 @@ class UserController extends Controller
         $rules = [
             'name' => 'required|string|max:255',
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'username' => ['required', 'string', 'max:255', Rule::unique('users')->ignore($user->id)],
             'password' => 'nullable|string|min:8',
             'phone' => 'nullable|string|max:30',
             'status' => 'required|string|in:Active,Inactive',
@@ -190,6 +195,7 @@ class UserController extends Controller
 
         $user->name = $data['name'];
         $user->email = $data['email'];
+        $user->username = $data['username'];
         $user->phone = $data['phone'] ?? null;
         $user->status = strtolower($data['status']) === 'active' ? 'active' : 'inactive';
         $user->branch_id = array_key_exists('branch_id', $data) ? $data['branch_id'] : $user->branch_id;
@@ -241,6 +247,7 @@ class UserController extends Controller
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
+            'username' => $user->username,
             'phone' => $user->phone,
             'status' => $user->status === 'active' ? 'Active' : 'Inactive',
             'pharmacy_id' => $user->pharmacy_id,

@@ -67,10 +67,10 @@ export const AuthProvider = ({ children }) => {
     fetchMe();
   }, [token]);
 
-  const login = async (email, password) => {
+  const login = async (username, password) => {
     setLoading(true);
     try {
-      const res = await api.post('/auth/login', { email, password });
+      const res = await api.post('/auth/login', { username, password });
       const { access_token, user: userData, pharmacy: pharmacyData, branch: branchData } = res.data;
 
       setToken(access_token);

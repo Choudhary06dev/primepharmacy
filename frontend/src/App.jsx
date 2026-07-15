@@ -5,7 +5,6 @@ import { ThemeProvider } from './context/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import DashboardLayout from './components/Layout/DashboardLayout';
 import Login from './features/auth/Login';
-import Register from './features/auth/Register';
 import Dashboard from './features/dashboard/Dashboard';
 import Pharmacies from './features/admin/pages/Pharmacies';
 import Categories from './features/inventory/pages/Categories';
@@ -33,7 +32,6 @@ function App() {
         <Routes>
           {/* Public Auth Routes */}
           <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
 
           {/* Protected Dashboard Routes */}
           <Route

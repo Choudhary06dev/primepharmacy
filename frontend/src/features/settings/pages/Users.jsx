@@ -33,6 +33,7 @@ const Users = () => {
   const [formData, setFormData] = useState({ 
     name: '', 
     email: '', 
+    username: '', 
     phone: '', 
     role: 'Operator', 
     designation: '', 
@@ -140,7 +141,7 @@ const Users = () => {
     const defaultBranch = !isSuperAdmin && branches.length > 0 ? String(branches[0].id) : '';
 
     setFormData({
-      name: '', email: '', phone: '',
+      name: '', email: '', username: '', phone: '',
       role: matchedRoles.length > 0 ? matchedRoles[0]?.name || 'Operator' : 'Operator',
       designation: '', status: 'Active', password: '',
       pharmacy_id: defaultPharm,
@@ -153,7 +154,7 @@ const Users = () => {
 
   const openEdit = (u) => {
     setFormData({
-      name: u.name, email: u.email, phone: u.phone,
+      name: u.name, email: u.email, username: u.username || '', phone: u.phone,
       role: u.role, designation: u.designation || '',
       status: u.status, password: '',
       pharmacy_id: u.pharmacy_id !== null && u.pharmacy_id !== undefined ? String(u.pharmacy_id) : 'global',
@@ -342,7 +343,9 @@ const Users = () => {
       render: (val, row) => (
         <div className="flex flex-col">
           <span className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>{val}</span>
-          <span className="text-[11px] font-mono" style={{ color: 'var(--color-text-tertiary)' }}>{row.email}</span>
+          <span className="text-[11px] font-mono" style={{ color: 'var(--color-text-tertiary)' }}>
+            @{row.username || 'no-username'} • {row.email}
+          </span>
         </div>
       ),
     },
@@ -550,6 +553,7 @@ const Users = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <Input label="Full Name" name="name" required value={formData.name} onChange={handleFormChange} placeholder="e.g. Sarah Ahmed" />
+            <Input label="Username" name="username" required value={formData.username} onChange={handleFormChange} placeholder="e.g. sarah_ahmed" />
             <Input label="Email Address" name="email" type="email" required value={formData.email} onChange={handleFormChange} placeholder="e.g. cashier@pharmacy.com" />
             <Input label="Phone Number" name="phone" value={formData.phone} onChange={handleFormChange} placeholder="e.g. +923000000000" />
             <Input

@@ -27,6 +27,7 @@ class User extends Authenticatable
         'branch_id',
         'name',
         'email',
+        'username',
         'password',
         'phone',
         'status',
@@ -53,6 +54,27 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    protected static function booted()
+    {
+        static::creating(function ($user) {
+            if (empty($user->username) && !empty($user->email)) {
+                $emailPrefix = explode('@', $user->email)[0];
+                $username = strtolower(preg_replace('/[^a-zA-Z0-9_.]/', '', $emailPrefix));
+                if (empty($username)) {
+                    $username = 'user_' . \Illuminate\Support\Str::lower(\Illuminate\Support\Str::random(5));
+                }
+
+                $original = $username;
+                $counter = 1;
+                while (static::where('username', $username)->exists()) {
+                    $username = $original . $counter;
+                    $counter++;
+                }
+                $user->username = $username;
+            }
+        });
     }
 
     /**

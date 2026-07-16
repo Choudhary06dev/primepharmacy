@@ -9,8 +9,10 @@ import Modal from '../../../components/UI/Modal';
 import { getPurchases, getPurchaseDetails, createPurchase } from '../../../services/purchasesService';
 import { getSuppliers } from '../../../services/suppliersService';
 import { getMedicines, getMedicine, getUnits, getCategories, getCompanies, createMedicine } from '../../../services/inventoryService';
+import { useBranchFilter } from '../../../context/BranchFilterContext';
 
 const Purchases = () => {
+  const { selectedBranchId } = useBranchFilter();
   const [purchases, setPurchases] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
 
@@ -18,6 +20,11 @@ const Purchases = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+
+  // Reset suppliers list when branch changes so they reload for the active branch in modal
+  useEffect(() => {
+    setSuppliers([]);
+  }, [selectedBranchId]);
 
   // Pagination & Search States
   const [currentPage, setCurrentPage] = useState(1);
@@ -153,7 +160,7 @@ const Purchases = () => {
 
   useEffect(() => {
     fetchPurchasesList();
-  }, [currentPage, searchQuery, pageSize]);
+  }, [currentPage, searchQuery, pageSize, selectedBranchId]);
 
   const fetchPurchasesList = async () => {
     setPurchasesLoading(true);

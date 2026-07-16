@@ -12,8 +12,9 @@ class CustomerController extends Controller
 {
     /**
      * Display a listing of customers.
+     * Scoping is handled automatically by TenantScope based on request parameters and user branch.
      */
-    public function index()
+    public function index(Request $request)
     {
         $customers = Customer::orderBy('name', 'asc')->get();
         return response()->json($customers);
@@ -38,12 +39,15 @@ class CustomerController extends Controller
 
         $data = $validator->validated();
 
+        $branchId = $authUser->branch_id;
+
         $customer = Customer::create([
-            'name' => $data['name'],
-            'phone' => $data['phone'] ?? null,
-            'email' => $data['email'] ?? null,
-            'address' => $data['address'] ?? null,
-            'balance' => 0.00,
+            'name'      => $data['name'],
+            'phone'     => $data['phone'] ?? null,
+            'email'     => $data['email'] ?? null,
+            'address'   => $data['address'] ?? null,
+            'balance'   => 0.00,
+            'branch_id' => $branchId,
         ]);
 
         return response()->json($customer, 201);

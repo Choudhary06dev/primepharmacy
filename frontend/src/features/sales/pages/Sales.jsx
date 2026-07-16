@@ -4,8 +4,10 @@ import DataTable from '../../../components/DataTable';
 import Modal from '../../../components/UI/Modal';
 import Button from '../../../components/UI/Button';
 import { getInvoices, getInvoiceDetails } from '../../../services/salesService';
+import { useBranchFilter } from '../../../context/BranchFilterContext';
 
 const Sales = () => {
+  const { selectedBranchId } = useBranchFilter();
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -23,7 +25,7 @@ const Sales = () => {
 
   useEffect(() => {
     fetchInvoices();
-  }, [currentPage, searchQuery, pageSize]);
+  }, [currentPage, searchQuery, pageSize, selectedBranchId]);
 
   const fetchInvoices = async () => {
     setLoading(true);

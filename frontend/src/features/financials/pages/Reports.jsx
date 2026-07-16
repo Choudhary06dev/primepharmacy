@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import PageHeader from '../../../components/PageHeader';
 import { getReportsSummary } from '../../../services/reportsService';
+import { useBranchFilter } from '../../../context/BranchFilterContext';
 
 const Reports = () => {
+  const { selectedBranchId } = useBranchFilter();
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -59,7 +61,7 @@ const Reports = () => {
         fetchData({ start_date: todayStr, end_date: todayStr });
       }
     }
-  }, [filterRange]);
+  }, [filterRange, selectedBranchId]);
 
   const fetchData = async (filters = {}) => {
     setLoading(true);

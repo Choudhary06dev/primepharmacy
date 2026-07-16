@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -11,6 +12,7 @@ class Customer extends TenantModel
 {
     protected $fillable = [
         'pharmacy_id',
+        'branch_id',
         'name',
         'phone',
         'email',
@@ -23,6 +25,11 @@ class Customer extends TenantModel
         return [
             'balance' => 'decimal:2',
         ];
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     public function sales(): HasMany

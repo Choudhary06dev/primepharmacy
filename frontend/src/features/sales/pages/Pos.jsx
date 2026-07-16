@@ -8,9 +8,11 @@ import Modal from '../../../components/UI/Modal';
 import { getMedicines, getUnits, getMedicine } from '../../../services/inventoryService';
 import { getCustomers, createCustomer, checkoutPOS } from '../../../services/salesService';
 import { useAuth } from '../../../context/AuthContext';
+import { useBranchFilter } from '../../../context/BranchFilterContext';
 
 const Pos = () => {
   const { pharmacy, user } = useAuth();
+  const { selectedBranchId } = useBranchFilter();
   
   // Lists
   const [units, setUnits] = useState([]);
@@ -45,7 +47,7 @@ const Pos = () => {
 
   useEffect(() => {
     fetchPOSData();
-  }, []);
+  }, [selectedBranchId]);
 
   const fetchPOSData = async () => {
     setLoading(true);

@@ -15,8 +15,10 @@ import {
   updateExpenseCategory,
   deleteExpenseCategory,
 } from '../../../services/financialsService';
+import { useBranchFilter } from '../../../context/BranchFilterContext';
 
 const Expenses = () => {
+  const { selectedBranchId } = useBranchFilter();
   const [expenses, setExpenses] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,7 +51,7 @@ const Expenses = () => {
 
   useEffect(() => {
     fetchInitialData();
-  }, []);
+  }, [selectedBranchId]);
 
   const fetchInitialData = async () => {
     setLoading(true);

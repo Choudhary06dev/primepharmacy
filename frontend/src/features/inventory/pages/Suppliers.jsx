@@ -5,8 +5,10 @@ import Button from '../../../components/UI/Button';
 import Input from '../../../components/UI/Input';
 import Modal from '../../../components/UI/Modal';
 import { getSuppliers, createSupplier, updateSupplier, deleteSupplier } from '../../../services/suppliersService';
+import { useBranchFilter } from '../../../context/BranchFilterContext';
 
 const Suppliers = () => {
+  const { selectedBranchId } = useBranchFilter();
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -28,7 +30,7 @@ const Suppliers = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [selectedBranchId]);
 
   const fetchData = async () => {
     setLoading(true);

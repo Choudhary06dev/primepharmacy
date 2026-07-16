@@ -7,8 +7,10 @@ import Select from '../../../components/UI/Select';
 import SearchableSelect from '../../../components/UI/SearchableSelect';
 import Modal from '../../../components/UI/Modal';
 import { getBatches, createBatch, updateBatch, deleteBatch, getMedicines } from '../../../services/inventoryService';
+import { useBranchFilter } from '../../../context/BranchFilterContext';
 
 const Batches = () => {
+  const { selectedBranchId } = useBranchFilter();
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -31,10 +33,10 @@ const Batches = () => {
   const [formError, setFormError] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  // Fetch batches & medicines on mount
+  // Fetch batches & medicines on mount / branch filter change
   useEffect(() => {
     fetchInitialData();
-  }, []);
+  }, [selectedBranchId]);
 
   const fetchInitialData = async () => {
     setLoading(true);

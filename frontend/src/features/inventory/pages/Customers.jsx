@@ -5,8 +5,10 @@ import Button from '../../../components/UI/Button';
 import Input from '../../../components/UI/Input';
 import Modal from '../../../components/UI/Modal';
 import { getCustomers, createCustomer, updateCustomer, deleteCustomer } from '../../../services/salesService';
+import { useBranchFilter } from '../../../context/BranchFilterContext';
 
 const Customers = () => {
+  const { selectedBranchId } = useBranchFilter();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -27,7 +29,7 @@ const Customers = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [selectedBranchId]);
 
   const fetchData = async () => {
     setLoading(true);

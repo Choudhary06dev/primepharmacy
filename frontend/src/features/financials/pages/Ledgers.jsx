@@ -7,8 +7,10 @@ import Modal from '../../../components/UI/Modal';
 import { getSuppliers } from '../../../services/suppliersService';
 import { getCustomers } from '../../../services/salesService';
 import { getSupplierLedger, getCustomerLedger } from '../../../services/financialsService';
+import { useBranchFilter } from '../../../context/BranchFilterContext';
 
 const Ledgers = () => {
+  const { selectedBranchId } = useBranchFilter();
   const location = useLocation();
   const [suppliers, setSuppliers] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -31,7 +33,7 @@ const Ledgers = () => {
 
   useEffect(() => {
     fetchInitialData();
-  }, []);
+  }, [selectedBranchId]);
 
   const fetchInitialData = async () => {
     setLoading(true);

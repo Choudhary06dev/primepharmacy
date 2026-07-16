@@ -12,8 +12,9 @@ class SupplierController extends Controller
 {
     /**
      * Display a listing of suppliers.
+     * Scoping is handled automatically by TenantScope based on request parameters and user branch.
      */
-    public function index()
+    public function index(Request $request)
     {
         $suppliers = Supplier::orderBy('name', 'asc')->get();
         return response()->json($suppliers);
@@ -46,13 +47,16 @@ class SupplierController extends Controller
 
         $data = $validator->validated();
 
+        $branchId = $authUser->branch_id;
+
         $supplier = Supplier::create([
-            'name' => $data['name'],
+            'name'           => $data['name'],
             'contact_person' => $data['contact_person'] ?? null,
-            'phone' => $data['phone'] ?? null,
-            'email' => $data['email'] ?? null,
-            'address' => $data['address'] ?? null,
-            'balance' => 0.00,
+            'phone'          => $data['phone'] ?? null,
+            'email'          => $data['email'] ?? null,
+            'address'        => $data['address'] ?? null,
+            'balance'        => 0.00,
+            'branch_id'      => $branchId,
         ]);
 
         return response()->json($supplier, 201);

@@ -56,18 +56,15 @@ const saveCustomers = () => { localStorage.setItem(STORAGE_CUSTOMERS_KEY, JSON.s
 
 // ─── CUSTOMERS MANAGEMENT ───────────────────────────────────────────────
 
-let customersCache = null;
-registerCacheInvalidator(() => { customersCache = null; });
+// NOTE: no module-level cache here — results are branch-scoped and must always be fresh
 export const getCustomers = async () => {
   if (isMockMode()) {
     await delay(150);
     const pharmacyId = getActivePharmacyId();
     return mockCustomers.filter((c) => c.pharmacy_id === pharmacyId || c.pharmacy_id === undefined);
   }
-  if (customersCache) return customersCache;
   const response = await api.get('/customers');
-  customersCache = response.data;
-  return customersCache;
+  return response.data;
 };
 
 export const createCustomer = async (data) => {
@@ -89,7 +86,6 @@ export const createCustomer = async (data) => {
 
   try {
     const response = await api.post('/customers', data);
-    customersCache = null;
     return response.data;
   } catch (error) {
     const errorMsg = error.response?.data?.errors
@@ -118,7 +114,6 @@ export const updateCustomer = async (id, data) => {
 
   try {
     const response = await api.put(`/customers/${id}`, data);
-    customersCache = null;
     return response.data;
   } catch (error) {
     const errorMsg = error.response?.data?.errors
@@ -147,7 +142,6 @@ export const deleteCustomer = async (id) => {
 
   try {
     const response = await api.delete(`/customers/${id}`);
-    customersCache = null;
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.message || 'Failed to delete customer.');

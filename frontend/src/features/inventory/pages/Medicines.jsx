@@ -6,8 +6,10 @@ import Input from '../../../components/UI/Input';
 import Select from '../../../components/UI/Select';
 import Modal from '../../../components/UI/Modal';
 import { getMedicines, createMedicine, updateMedicine, deleteMedicine, getCategories, getCompanies, getUnits } from '../../../services/inventoryService';
+import { useBranchFilter } from '../../../context/BranchFilterContext';
 
 const Medicines = () => {
+  const { selectedBranchId } = useBranchFilter();
   const [medicines, setMedicines] = useState([]);
   const [categories, setCategories] = useState([]);
   const [companies, setCompanies] = useState([]);
@@ -82,7 +84,7 @@ const Medicines = () => {
   // Fetch medicines list dynamically
   useEffect(() => {
     fetchMedicinesList();
-  }, [currentPage, searchQuery, pageSize]);
+  }, [currentPage, searchQuery, pageSize, selectedBranchId]);
 
   const fetchMedicinesList = async () => {
     setLoading(true);

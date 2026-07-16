@@ -15,6 +15,7 @@ return new class extends Migration
         Schema::create('suppliers', function (Blueprint $table) {
             $table->id();
             $table->foreignId('pharmacy_id')->constrained('pharmacies')->cascadeOnDelete();
+            $table->foreignId('branch_id')->nullable()->constrained('branches')->nullOnDelete();
             $table->string('name', 150);
             $table->string('contact_person', 100)->nullable();
             $table->string('phone', 30)->nullable();
@@ -24,6 +25,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index('pharmacy_id');
+            $table->index('branch_id');
         });
     }
 

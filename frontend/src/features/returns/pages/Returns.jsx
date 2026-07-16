@@ -17,8 +17,10 @@ import {
   getSupplierReturnDetails,
   getCustomerReturnDetails,
 } from '../../../services/returnsService';
+import { useBranchFilter } from '../../../context/BranchFilterContext';
 
 const Returns = () => {
+  const { selectedBranchId } = useBranchFilter();
   const location = useLocation();
   const [custReturns, setCustReturns] = useState([]);
   const [supReturns, setSupReturns] = useState([]);
@@ -68,6 +70,13 @@ const Returns = () => {
 
   const [configLoading, setConfigLoading] = useState(false);
 
+  // Reset lookup lists when branch changes so they reload for the active branch in modal
+  useEffect(() => {
+    setSuppliers([]);
+    setCustomers([]);
+    setPurchases([]);
+  }, [selectedBranchId]);
+
   // Fetch only active tab's list of returns
   useEffect(() => {
     const fetchTabData = async () => {
@@ -89,7 +98,7 @@ const Returns = () => {
       }
     };
     fetchTabData();
-  }, [activeTab]);
+  }, [activeTab, selectedBranchId]);
 
   // Lazy load form dropdown configuration data on modal open
   useEffect(() => {

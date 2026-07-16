@@ -116,8 +116,19 @@ const Purchases = () => {
   const [detailData, setDetailData] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
+  const [configLoading, setConfigLoading] = useState(false);
+
   useEffect(() => {
+    if (!isModalOpen) return;
+    
+    // Skip loading if already populated
+    if (suppliers.length > 0 && units.length > 0 && categories.length > 0 && companies.length > 0) {
+      setLoading(false);
+      return;
+    }
+
     const loadConfigData = async () => {
+      setConfigLoading(true);
       try {
         const [supData, unitsData, catsData, compsData] = await Promise.all([
           getSuppliers(),
@@ -131,13 +142,14 @@ const Purchases = () => {
         setCompanies(compsData);
       } catch (err) {
         console.error(err);
-        setError('Failed to load purchases configuration database. Please try again.');
+        setFormError('Failed to load metadata configuration database (Suppliers, Units, etc.). Please try again.');
       } finally {
+        setConfigLoading(false);
         setLoading(false);
       }
     };
     loadConfigData();
-  }, []);
+  }, [isModalOpen]);
 
   useEffect(() => {
     fetchPurchasesList();
@@ -509,7 +521,14 @@ const Purchases = () => {
             </div>
           )}
 
-          {/* Invoice Meta */}
+          {configLoading ? (
+            <div className="flex flex-col items-center justify-center p-12 text-slate-500 dark:text-slate-400 text-sm gap-2">
+              <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+              <span>Loading purchase metadata (suppliers, units, categories, companies)...</span>
+            </div>
+          ) : (
+            <>
+              {/* Invoice Meta */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Select
               label="Supplier"
@@ -779,7 +798,8 @@ const Purchases = () => {
               </div>
             </div>
           </div>
-        </form>
+        </>)}
+      </form>
       </Modal>
 
       {/* View Details Modal */}

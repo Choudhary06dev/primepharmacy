@@ -2,9 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useBranchFilter } from '../../context/BranchFilterContext';
 import { useNavigate } from 'react-router-dom';
-import { getDashboardStats, getInvoices, getCustomers } from '../../services/salesService';
+import { getDashboardStats, getInvoices } from '../../services/salesService';
 import { getReportsSummary } from '../../services/reportsService';
-import { getSuppliers } from '../../services/suppliersService';
 
 /* ───────────────────────── Animated Counter Hook ───────────────────────── */
 const useCountUp = (target, duration = 1400, enabled = true) => {
@@ -113,21 +112,25 @@ const Dashboard = () => {
     setLoading(true);
     const load = async () => {
       try {
-        const [stats, reports, invoices, customers, suppliers] = await Promise.allSettled([
+        const [stats, reports, invoices] = await Promise.allSettled([
           getDashboardStats(),
           getReportsSummary(),
-          getInvoices(),
-          getCustomers(),
-          getSuppliers(),
+          getInvoices(1, '', 5),
         ]);
 
         if (!active) return;
 
-        if (stats.status === 'fulfilled') setStatsData(stats.value);
+        if (stats.status === 'fulfilled') {
+          setStatsData(stats.value);
+          setCustomerCount(stats.value?.customers_count ?? 0);
+          setSupplierCount(stats.value?.suppliers_count ?? 0);
+        }
         if (reports.status === 'fulfilled') setReportsData(reports.value);
-        if (invoices.status === 'fulfilled') setRecentSales((invoices.value || []).slice(0, 2));
-        if (customers.status === 'fulfilled') setCustomerCount((customers.value || []).length);
-        if (suppliers.status === 'fulfilled') setSupplierCount((suppliers.value || []).length);
+        if (invoices.status === 'fulfilled') {
+          const val = invoices.value;
+          const salesList = Array.isArray(val) ? val : (val?.data || []);
+          setRecentSales(salesList.slice(0, 2));
+        }
 
         // Expiring batches (within 30 days)
         try {

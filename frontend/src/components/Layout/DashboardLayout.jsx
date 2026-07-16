@@ -376,7 +376,7 @@ const DashboardLayout = ({ children }) => {
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto p-6" style={{ backgroundColor: 'var(--color-surface-secondary)' }}>
-          <div key={`${location.pathname}-branch-${selectedBranchId || 'all'}`} className="page-animate">
+          <div key={location.pathname} className="page-animate">
             {children}
           </div>
         </main>

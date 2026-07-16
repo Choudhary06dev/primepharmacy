@@ -66,33 +66,61 @@ const Returns = () => {
   const [detailData, setDetailData] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  useEffect(() => {
-    fetchInitialData();
-  }, []);
+  const [configLoading, setConfigLoading] = useState(false);
 
-  const fetchInitialData = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [custRet, supRet, supList, custList, purchList] = await Promise.all([
-        getCustomerReturns(),
-        getSupplierReturns(),
-        getSuppliers(),
-        getCustomers(),
-        getPurchases(),
-      ]);
-      setCustReturns(custRet);
-      setSupReturns(supRet);
-      setSuppliers(supList);
-      setCustomers(custList);
-      setPurchases(purchList);
-    } catch (err) {
-      console.error(err);
-      setError('Failed to load returns records. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Fetch only active tab's list of returns
+  useEffect(() => {
+    const fetchTabData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        if (activeTab === 'customer') {
+          const custRet = await getCustomerReturns();
+          setCustReturns(custRet);
+        } else {
+          const supRet = await getSupplierReturns();
+          setSupReturns(supRet);
+        }
+      } catch (err) {
+        console.error(err);
+        setError('Failed to load returns records. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTabData();
+  }, [activeTab]);
+
+  // Lazy load form dropdown configuration data on modal open
+  useEffect(() => {
+    if (!isModalOpen) return;
+
+    if (activeTab === 'customer' && customers.length > 0) return;
+    if (activeTab === 'supplier' && suppliers.length > 0 && purchases.length > 0) return;
+
+    const loadConfigData = async () => {
+      setConfigLoading(true);
+      try {
+        if (activeTab === 'customer') {
+          const custList = await getCustomers();
+          setCustomers(custList);
+        } else {
+          const [supList, purchList] = await Promise.all([
+            getSuppliers(),
+            getPurchases(),
+          ]);
+          setSuppliers(supList);
+          setPurchases(purchList);
+        }
+      } catch (err) {
+        console.error(err);
+        setFormError('Failed to load configuration metadata (Customers/Suppliers). Please try again.');
+      } finally {
+        setConfigLoading(false);
+      }
+    };
+    loadConfigData();
+  }, [isModalOpen, activeTab]);
 
   // Filter purchases for selected supplier
   const supplierPurchases = React.useMemo(() => {
@@ -485,7 +513,14 @@ const Returns = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {configLoading ? (
+            <div className="flex flex-col items-center justify-center p-12 text-slate-500 dark:text-slate-400 text-sm gap-2">
+              <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+              <span>Loading return configuration options (customers, suppliers, purchases)...</span>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {activeTab === 'customer' ? (
               <Select
                 label="Select Customer"
@@ -654,7 +689,8 @@ const Returns = () => {
               required
             />
           </div>
-        </form>
+        </>)}
+      </form>
       </Modal>
 
       {/* View Return Details Modal */}

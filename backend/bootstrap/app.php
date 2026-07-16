@@ -20,6 +20,15 @@ return Application::configure(basePath: dirname(__DIR__))
             'subscription' => \App\Http\Middleware\CheckSubscription::class,
             'auth.rate.limit' => \App\Http\Middleware\AuthRateLimit::class,
         ]);
+
+        $middleware->redirectGuestsTo(function ($request) {
+            if ($request->is('api/*') || $request->wantsJson()) {
+                return null;
+            }
+            return \Illuminate\Support\Facades\Route::has('login') 
+                ? route('login') 
+                : null;
+        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (\Illuminate\Database\QueryException $e, $request) {
@@ -43,6 +52,14 @@ return Application::configure(basePath: dirname(__DIR__))
                 return response()->json([
                     'message' => 'A database connection error occurred.'
                 ], 500);
+            }
+        });
+
+        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, $request) {
+            if ($request->is('api/*') || $request->wantsJson()) {
+                return response()->json([
+                    'message' => 'Unauthenticated.'
+                ], 401);
             }
         });
     })->create();

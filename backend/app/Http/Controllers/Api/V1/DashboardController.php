@@ -116,6 +116,10 @@ class DashboardController extends Controller
             ->when($targetBranchId, fn($q) => $q->where('branch_id', $targetBranchId))
             ->count();
 
+        // 7. Customer & Supplier counts
+        $customerCount = \App\Models\Customer::count();
+        $supplierCount = \App\Models\Supplier::count();
+ 
         return response()->json([
             'today_sales' => $todaySales,
             'today_sales_change' => $salesChangeStr,
@@ -126,6 +130,8 @@ class DashboardController extends Controller
             'critical_warnings' => $criticalWarnings,
             'this_month_sales' => $thisMonthSales,
             'expired_batches' => $expiredBatches,
+            'customers_count' => $customerCount,
+            'suppliers_count' => $supplierCount,
         ]);
     }
 }

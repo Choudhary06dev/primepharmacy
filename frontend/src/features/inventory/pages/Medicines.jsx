@@ -50,32 +50,39 @@ const Medicines = () => {
   });
   const [formError, setFormError] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [configLoading, setConfigLoading] = useState(false);
 
-  // Fetch static data on mount
+  // Fetch static data lazily on modal open
   useEffect(() => {
+    if (!isModalOpen) return;
+
+    if (categories.length > 0 && companies.length > 0 && units.length > 0) return;
+
+    const fetchStaticData = async () => {
+      setConfigLoading(true);
+      try {
+        const [catsData, compsData, unitsData] = await Promise.all([
+          getCategories(),
+          getCompanies(),
+          getUnits()
+        ]);
+        setCategories(catsData);
+        setCompanies(compsData);
+        setUnits(unitsData);
+      } catch (err) {
+        console.error(err);
+        setFormError('Failed to fetch catalog options (Categories, Companies, Units).');
+      } finally {
+        setConfigLoading(false);
+      }
+    };
     fetchStaticData();
-  }, []);
+  }, [isModalOpen]);
 
   // Fetch medicines list dynamically
   useEffect(() => {
     fetchMedicinesList();
   }, [currentPage, searchQuery, pageSize]);
-
-  const fetchStaticData = async () => {
-    try {
-      const [catsData, compsData, unitsData] = await Promise.all([
-        getCategories(),
-        getCompanies(),
-        getUnits()
-      ]);
-      setCategories(catsData);
-      setCompanies(compsData);
-      setUnits(unitsData);
-    } catch (err) {
-      console.error(err);
-      setError('Failed to fetch catalog lists. Please refresh.');
-    }
-  };
 
   const fetchMedicinesList = async () => {
     setLoading(true);
@@ -410,7 +417,14 @@ const Medicines = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {configLoading ? (
+            <div className="flex flex-col items-center justify-center p-12 text-slate-500 dark:text-slate-400 text-sm gap-2">
+              <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+              <span>Loading form configuration (categories, companies, units)...</span>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <Input
               label="Medicine Name"
               name="name"
@@ -539,7 +553,8 @@ const Medicines = () => {
               </div>
             )}
           </div>
-        </form>
+        </>)}
+      </form>
       </Modal>
     </div>
   );

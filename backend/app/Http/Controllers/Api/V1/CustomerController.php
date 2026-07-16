@@ -27,10 +27,9 @@ class CustomerController extends Controller
         $authUser = $request->user();
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:100',
-            'phone' => 'nullable|string|max:30',
+            'phone' => 'nullable|phone',
             'email' => 'nullable|string|email|max:255',
             'address' => 'nullable|string',
-            'branch_id' => 'nullable|integer',
         ]);
 
         if ($validator->fails()) {
@@ -44,7 +43,6 @@ class CustomerController extends Controller
             'phone' => $data['phone'] ?? null,
             'email' => $data['email'] ?? null,
             'address' => $data['address'] ?? null,
-            'branch_id' => $data['branch_id'] ?? ($authUser ? $authUser->branch_id : null),
             'balance' => 0.00,
         ]);
 
@@ -66,10 +64,9 @@ class CustomerController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:100',
-            'phone' => 'nullable|string|max:30',
+            'phone' => 'nullable|phone',
             'email' => 'nullable|string|email|max:255',
             'address' => 'nullable|string',
-            'branch_id' => 'nullable|integer',
         ]);
 
         if ($validator->fails()) {

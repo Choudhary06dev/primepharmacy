@@ -181,7 +181,7 @@ class SaleController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => $e->getMessage()], 422);
+            return $this->handleSafeError($e, 'Failed to process sale checkout', 422);
         }
     }
 

@@ -179,7 +179,7 @@ class PurchaseController extends Controller
             return response()->json($purchase, 201);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Failed to register purchase: ' . $e->getMessage()], 500);
+            return $this->handleSafeError($e, 'Failed to register purchase');
         }
     }
 

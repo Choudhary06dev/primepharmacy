@@ -9,4 +9,4 @@ Route::get('/', function () {
         'status' => 'running',
         'documentation' => '/api/v1',
     ]);
-});
+})->middleware('throttle:api_public');

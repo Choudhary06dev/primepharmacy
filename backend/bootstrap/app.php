@@ -18,8 +18,31 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'tenant' => \App\Http\Middleware\IdentifyTenant::class,
             'subscription' => \App\Http\Middleware\CheckSubscription::class,
+            'auth.rate.limit' => \App\Http\Middleware\AuthRateLimit::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (\Illuminate\Database\QueryException $e, $request) {
+            if ($request->is('api/*') || $request->wantsJson()) {
+                \Illuminate\Support\Facades\Log::error('API Database Query Exception: ' . $e->getMessage(), [
+                    'exception' => $e,
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                return response()->json([
+                    'message' => 'A database error occurred.'
+                ], 500);
+            }
+        });
+
+        $exceptions->render(function (\PDOException $e, $request) {
+            if ($request->is('api/*') || $request->wantsJson()) {
+                \Illuminate\Support\Facades\Log::error('API Database PDO Exception: ' . $e->getMessage(), [
+                    'exception' => $e,
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                return response()->json([
+                    'message' => 'A database connection error occurred.'
+                ], 500);
+            }
+        });
     })->create();

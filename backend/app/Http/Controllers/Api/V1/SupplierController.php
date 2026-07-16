@@ -35,10 +35,9 @@ class SupplierController extends Controller
                 })
             ],
             'contact_person' => 'nullable|string|max:100',
-            'phone' => 'nullable|string|max:30',
+            'phone' => 'nullable|phone',
             'email' => 'nullable|string|email|max:255',
             'address' => 'nullable|string',
-            'branch_id' => 'nullable|integer',
         ]);
 
         if ($validator->fails()) {
@@ -53,7 +52,6 @@ class SupplierController extends Controller
             'phone' => $data['phone'] ?? null,
             'email' => $data['email'] ?? null,
             'address' => $data['address'] ?? null,
-            'branch_id' => $data['branch_id'] ?? ($authUser ? $authUser->branch_id : null),
             'balance' => 0.00,
         ]);
 
@@ -84,10 +82,9 @@ class SupplierController extends Controller
                 })->ignore($supplier->id)
             ],
             'contact_person' => 'nullable|string|max:100',
-            'phone' => 'nullable|string|max:30',
+            'phone' => 'nullable|phone',
             'email' => 'nullable|string|email|max:255',
             'address' => 'nullable|string',
-            'branch_id' => 'nullable|integer',
         ]);
 
         if ($validator->fails()) {

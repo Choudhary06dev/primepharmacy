@@ -8,9 +8,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: primepharm
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: Amjad@186699
+      POSTGRES_DB: ${DB_DATABASE:-primepharm}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-Amjad@186699}
     volumes:
       - db_data:/var/lib/postgresql/data
     networks:
@@ -33,9 +33,9 @@ services:
       - DB_CONNECTION=pgsql
       - DB_HOST=db
       - DB_PORT=5432
-      - DB_DATABASE=primepharm
-      - DB_USERNAME=postgres
-      - DB_PASSWORD=Amjad@186699
+      - DB_DATABASE=${DB_DATABASE:-primepharm}
+      - DB_USERNAME=${DB_USERNAME:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-Amjad@186699}
     depends_on:
       - db
     extra_hosts:

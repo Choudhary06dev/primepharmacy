@@ -83,7 +83,10 @@ class SecureUploadRequest extends FormRequest
         $type = $this->input('type');
 
         // 1. Generate a cryptographically secure random filename to prevent execution spoofing
-        $extension = $file->getClientOriginalExtension();
+        // Guess extension based on verified MIME content type instead of trusting original client name
+        $extension = $file->guessExtension() ?? $file->getClientOriginalExtension();
+        $extension = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $extension));
+        
         $safeName = Str::random(40) . '.' . $extension;
 
         // 2. Define safe folder hierarchy

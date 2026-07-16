@@ -237,7 +237,7 @@ class MedicineController extends Controller
             return response()->json($medicine, 201);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Failed to create medicine: ' . $e->getMessage()], 500);
+            return $this->handleSafeError($e, 'Failed to create medicine');
         }
     }
 
@@ -347,7 +347,7 @@ class MedicineController extends Controller
             return response()->json($medicine);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Failed to update medicine: ' . $e->getMessage()], 500);
+            return $this->handleSafeError($e, 'Failed to update medicine');
         }
     }
 

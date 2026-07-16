@@ -88,7 +88,7 @@ class CustomerReturnController extends Controller
             return response()->json($returnRecord, 201);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Failed to record customer return: ' . $e->getMessage()], 500);
+            return $this->handleSafeError($e, 'Failed to record customer return');
         }
     }
 }

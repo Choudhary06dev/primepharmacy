@@ -34,7 +34,7 @@ class CompanyController extends Controller
                 })
             ],
             'email' => 'nullable|string|email|max:255',
-            'phone' => 'nullable|string|max:30',
+            'phone' => 'nullable|phone',
         ]);
 
         if ($validator->fails()) {
@@ -71,7 +71,7 @@ class CompanyController extends Controller
                 })->ignore($company->id)
             ],
             'email' => 'nullable|string|email|max:255',
-            'phone' => 'nullable|string|max:30',
+            'phone' => 'nullable|phone',
         ]);
 
         if ($validator->fails()) {

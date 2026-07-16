@@ -40,7 +40,7 @@ class BranchController extends Controller
         $rules = [
             'name' => 'required|string|max:150',
             'address' => 'nullable|string|max:500',
-            'phone' => 'nullable|string|max:30',
+            'phone' => 'nullable|phone',
             'is_main' => 'nullable|boolean',
         ];
 
@@ -113,7 +113,7 @@ class BranchController extends Controller
                 })->ignore($branch->id)
             ],
             'address' => 'nullable|string|max:500',
-            'phone' => 'nullable|string|max:30',
+            'phone' => 'nullable|phone',
             'is_main' => 'nullable|boolean',
         ]);
 

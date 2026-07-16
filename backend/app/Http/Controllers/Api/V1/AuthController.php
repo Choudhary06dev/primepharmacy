@@ -29,7 +29,7 @@ class AuthController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
-            'phone' => 'nullable|string|max:30',
+            'phone' => 'nullable|phone',
         ]);
 
         if ($validator->fails()) {
@@ -157,6 +157,82 @@ class AuthController extends Controller
             ],
             'pharmacy' => $user->pharmacy,
             'branch' => $user->branch,
+        ]);
+    }
+
+    /**
+     * Request a password reset link/token.
+     */
+    public function forgotPassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email|exists:users,email',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $email = $request->email;
+        $token = \Illuminate\Support\Str::random(60);
+
+        \Illuminate\Support\Facades\DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $email],
+            [
+                'token' => Hash::make($token),
+                'created_at' => now(),
+            ]
+        );
+
+        return response()->json([
+            'message' => 'Password reset token generated.',
+            'email' => $email,
+            'token' => $token,
+        ]);
+    }
+
+    /**
+     * Reset the user's password using the token.
+     */
+    public function resetPassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email|exists:users,email',
+            'token' => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $record = \Illuminate\Support\Facades\DB::table('password_reset_tokens')->where('email', $request->email)->first();
+
+        if (!$record || !Hash::check($request->token, $record->token)) {
+            return response()->json([
+                'message' => 'Invalid or expired token.'
+            ], 400);
+        }
+
+        // Check token expiry (60 minutes)
+        if (now()->subMinutes(60)->gt($record->created_at)) {
+            return response()->json([
+                'message' => 'Token has expired.'
+            ], 400);
+        }
+
+        $user = User::where('email', $request->email)->first();
+        $user->password = Hash::make($request->password);
+        $user->save();
+
+        \Illuminate\Support\Facades\DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+
+        return response()->json([
+            'message' => 'Password has been reset successfully.'
         ]);
     }
 }

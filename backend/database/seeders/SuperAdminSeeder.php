@@ -34,7 +34,7 @@ class SuperAdminSeeder extends Seeder
             ['email' => 'superadmin@gmail.com'],
             [
                 'name' => 'Super Admin',
-                'password' => Hash::make('amjad123'),
+                'password' => Hash::make(env('SUPER_ADMIN_PASSWORD', 'amjad123')),
                 'pharmacy_id' => null,
                 'branch_id' => null,
                 'status' => 'active',

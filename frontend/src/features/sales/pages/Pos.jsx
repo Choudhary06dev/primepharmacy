@@ -27,7 +27,7 @@ const Pos = () => {
 
   // Pricing summaries
   const [discount, setDiscount] = useState(0);
-  const [taxRate, setTaxRate] = useState(5); // 5% default tax
+  const [taxRate, setTaxRate] = useState(0); // 0% default tax
   const [paidAmount, setPaidAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [paymentStatus, setPaymentStatus] = useState('PAID');
